@@ -124,41 +124,9 @@
       border:2px solid;
       box-shadow:0 0 25px;
     }
-    #playerScore { border-color:var(--neon-cyan); color:var(--neon-cyan); }
-    #oppScore   { border-color:var(--neon-magenta); color:var(--neon-magenta); }
-    #timer      { color:var(--neon-gold); font-weight:900; }
-
-    #joystick {
-      position:fixed;
-      bottom:clamp(50px,10vh,90px);
-      right:clamp(50px,10vw,90px);
-      width:clamp(160px,32vw,260px);
-      height:clamp(160px,32vw,260px);
-      z-index:60;
-      opacity:0;
-      transition:opacity 0.7s;
-      pointer-events:none;
-    }
-    #joystick.visible { opacity:1; pointer-events:auto; }
-    #joyBase {
-      position:absolute;
-      inset:0;
-      border-radius:50%;
-      background:rgba(255,255,255,0.07);
-      border:4px solid rgba(0,240,255,0.55);
-      box-shadow:inset 0 0 40px rgba(0,240,255,0.35);
-    }
-    #joyKnob {
-      position:absolute;
-      width:38%;
-      height:38%;
-      border-radius:50%;
-      background:radial-gradient(circle at 30% 30%, white, var(--neon-cyan));
-      box-shadow:0 0 40px var(--neon-cyan), inset 0 0 16px white;
-      transform:translate(-50%,-50%);
-      left:50%; top:50%;
-      transition:transform 0.07s;
-    }
+    #playerScore { border-color:var(--neon-cyan); color:var(--neon-cyan); left:0; position:absolute; }
+    #oppScore   { border-color:var(--neon-magenta); color:var(--neon-magenta); right:0; position:absolute; }
+    #timer      { color:var(--neon-gold); font-weight:900; margin:auto; }
 
     /* Scanlines */
     body::before {
@@ -202,13 +170,6 @@
     <div id="oppScore" class="score-box">OPP: <span id="oScore">0</span></div>
   </div>
 
-  <!-- Joystick -->
-  <div id="joystick">
-    <div id="joyBase">
-      <div id="joyKnob"></div>
-    </div>
-  </div>
-
   <!-- Game Over -->
   <div id="gameOverOverlay" class="hidden">
     <div class="neon-title">RACE TERMINATED</div>
@@ -236,11 +197,11 @@ const DIFFICULTY = {
   hard:   { aiSpeed:7.2, redChance:0.38, powerChance:0.04, speedChance:0.06 }
 };
 
-let difficulty = 'medium'; // default, can add selection
-let playerChar = 'Zeus'; // default, can add selection
+let difficulty = 'medium'; // default
+let playerChar = 'Zeus'; // default
 
 // ────────────────────────────────────────────────
-// STATE
+ // STATE
 // ────────────────────────────────────────────────
 let canvas, ctx;
 let player, opponent, souls = [], particles = [], stars = [];
@@ -248,29 +209,26 @@ let camX = 0, camY = 0, zoom = 1, targetZoom = 1;
 let timeLeft = GAME_TIME;
 let poseidonTimer = POSEIDON_INTERVAL;
 let isRunning = false;
-let joystickActive = false;
-let lastTouchId = null;
 let floodProgress = 0;
 let isFlooding = false;
+let isDragging = false;
 
 // ────────────────────────────────────────────────
  // DOM
 // ────────────────────────────────────────────────
-const landingOverlay   = document.getElementById('landingOverlay');
-const landingVideo     = document.getElementById('landingVideo');
-const startOverlay     = document.getElementById('startVideoOverlay');
-const startVideo       = document.getElementById('startVideo');
-const countdownEl      = document.getElementById('countdown');
-const hud              = document.getElementById('hud');
-const joystick         = document.getElementById('joystick');
-const joyKnob          = document.getElementById('joyKnob');
-const pScoreEl         = document.getElementById('pScore');
-const oScoreEl         = document.getElementById('oScore');
-const timerEl          = document.getElementById('timer');
-const gameOverOverlay  = document.getElementById('gameOverOverlay');
-const goResult         = document.getElementById('goResult');
-const goScore          = document.getElementById('goScore');
-const bgm              = document.getElementById('bgm');
+const landingOverlay = document.getElementById('landingOverlay');
+const landingVideo = document.getElementById('landingVideo');
+const startOverlay = document.getElementById('startVideoOverlay');
+const startVideo = document.getElementById('startVideo');
+const countdownEl = document.getElementById('countdown');
+const hud = document.getElementById('hud');
+const pScoreEl = document.getElementById('pScore');
+const oScoreEl = document.getElementById('oScore');
+const timerEl = document.getElementById('timer');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const goResult = document.getElementById('goResult');
+const goScore = document.getElementById('goScore');
+const bgm = document.getElementById('bgm');
 
 // ────────────────────────────────────────────────
  // MUSIC
@@ -285,6 +243,7 @@ function playRandomMusic() {
   const track = musicTracks[Math.floor(Math.random() * musicTracks.length)];
   bgm.src = track;
   bgm.volume = 0.5;
+  bgm.muted = false;
   bgm.play().catch(e => console.log("Autoplay blocked:", e));
 }
 
@@ -298,12 +257,13 @@ function init() {
   window.addEventListener('resize', resize);
   createStars();
 
-  // Landing flow
+  // Sequential videos
   landingOverlay.addEventListener('click', () => {
     if (landingVideo.paused) {
       landingVideo.play().catch(() => {});
     } else {
       landingOverlay.classList.add('hidden');
+      landingVideo.pause(); // stop landing audio
       startOverlay.classList.remove('hidden');
       startVideo.play().catch(() => {});
       startCountdown();
@@ -327,6 +287,7 @@ function createStars() {
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  targetZoom = Math.min(canvas.width / WORLD_W, canvas.height / WORLD_H); // default full view
 }
 
 function startCountdown() {
@@ -338,8 +299,8 @@ function startCountdown() {
     if (cd <= 0) {
       clearInterval(interval);
       startOverlay.classList.add('hidden');
+      startVideo.pause(); // stop start video audio
       hud.classList.remove('hidden');
-      joystick.classList.add('visible');
       resetGame();
       isRunning = true;
       requestAnimationFrame(gameLoop);
@@ -350,7 +311,7 @@ function startCountdown() {
 }
 
 // ────────────────────────────────────────────────
- // RESET GAME
+ // RESET
 // ────────────────────────────────────────────────
 function resetGame() {
   timeLeft = GAME_TIME;
@@ -383,14 +344,14 @@ function resetGame() {
 
   souls = [];
   particles = [];
-  spawnSouls(BASE_SOULS);
+  generateSouls(BASE_SOULS);
   updateHUD();
 }
 
 // ────────────────────────────────────────────────
-// SPAWN SOULS
+ // SOUL GENERATOR
 // ────────────────────────────────────────────────
-function spawnSouls(count) {
+function generateSouls(count) {
   const cfg = DIFFICULTY[difficulty];
   for (let i = 0; i < count; i++) {
     const r = Math.random();
@@ -412,7 +373,7 @@ function spawnSouls(count) {
 }
 
 // ────────────────────────────────────────────────
- // GAME TIMER & POSEIDON
+ // TIMER
 // ────────────────────────────────────────────────
 function gameTimer() {
   if (!isRunning) return;
@@ -428,7 +389,7 @@ function gameTimer() {
 }
 
 // ────────────────────────────────────────────────
-// MAIN LOOP
+// LOOP
 // ────────────────────────────────────────────────
 function gameLoop() {
   if (!isRunning) return;
@@ -451,198 +412,69 @@ function updateGame() {
   updateParticles();
   updateCamera();
 
-  // Flood mechanic
   if (isFlooding) {
     floodProgress += 0.02;
     if (floodProgress >= 1) {
       souls = [];
       isFlooding = false;
-      spawnSouls(BASE_SOULS + 25);
+      generateSouls(BASE_SOULS + 25);
     }
   }
 }
 
-function updateOpponent() {
-  const cfg = DIFFICULTY[difficulty];
-  if (!opponent.target || !souls.includes(opponent.target)) {
-    if (souls.length === 0) return;
-    opponent.target = souls.reduce((best, s) => {
-      const d1 = Math.hypot(opponent.x - best.x, opponent.y - best.y);
-      const d2 = Math.hypot(opponent.x - s.x, opponent.y - s.y);
-      return d2 < d1 ? s : best;
-    }, souls[0]);
-  }
+// ────────────────────────────────────────────────
+ // CONTROLS (mouse/touch drag)
+ // ────────────────────────────────────────────────
+function setupControls() {
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    isDragging = true;
+  });
 
-  const dx = opponent.target.x - opponent.x;
-  const dy = opponent.target.y - opponent.y;
-  const dist = Math.hypot(dx, dy);
+  canvas.addEventListener('pointermove', e => {
+    if (!isRunning || !isDragging) return;
+    e.preventDefault();
 
-  if (dist > 8) {
-    opponent.x += (dx / dist) * cfg.aiSpeed;
-    opponent.y += (dy / dist) * cfg.aiSpeed;
-  } else {
-    const idx = souls.indexOf(opponent.target);
-    if (idx !== -1) {
-      opponent.score += souls[idx].value;
-      addParticles(souls[idx].x, souls[idx].y, souls[idx].color, 28);
-      souls.splice(idx, 1);
-      opponent.target = null;
+    const rect = canvas.getBoundingClientRect();
+    player.x = (e.clientX - rect.left) * (WORLD_W / rect.width) + camX;
+    player.y = (e.clientY - rect.top) * (WORLD_H / rect.height) + camY;
+
+    player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
+    player.y = Math.max(20, Math.min(WORLD_H - 20, player.y));
+  });
+
+  canvas.addEventListener('pointerup', () => {
+    isDragging = false;
+  });
+
+  // Zoom
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    targetZoom = Math.max(0.6, Math.min(2.5, targetZoom + delta));
+  }, { passive: false });
+
+  let initialDist = 0;
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     }
-  }
+  }, { passive: false });
 
-  opponent.x = Math.max(20, Math.min(WORLD_W - 20, opponent.x));
-  opponent.y = Math.max(20, Math.min(WORLD_H - 20, opponent.y));
-}
-
-function checkCollisions() {
-  for (let i = souls.length - 1; i >= 0; i--) {
-    const s = souls[i];
-    const d = Math.hypot(player.x - s.x, player.y - s.y);
-    if (d < player.size + s.radius + 12) {
-      player.score += s.value;
-      addParticles(s.x, s.y, s.color, s.type === 'power' ? 50 : s.type === 'speed' ? 35 : 25);
-      if (s.type === 'speed') player.speedEnd = Date.now() / 1000 + 5;
-      souls.splice(i, 1);
-      if (navigator.vibrate) navigator.vibrate(s.value > 0 ? 60 : 120);
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+      const delta = (dist - initialDist) / 400;
+      targetZoom = Math.max(0.6, Math.min(2.5, targetZoom + delta));
+      initialDist = dist;
     }
-  }
-}
-
-function updateParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life -= 0.018;
-    if (p.life <= 0) particles.splice(i, 1);
-  }
-}
-
-function addParticles(x, y, color, count = 30) {
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const spd = Math.random() * 10 + 4;
-    particles.push({
-      x, y,
-      vx: Math.cos(angle) * spd,
-      vy: Math.sin(angle) * spd,
-      life: 1,
-      color,
-      size: Math.random() * 6 + 2
-    });
-  }
+  }, { passive: false });
 }
 
 // ────────────────────────────────────────────────
- // CAMERA
+// HUD & END GAME
 // ────────────────────────────────────────────────
-function updateCamera() {
-  camX = player.x - canvas.width / (2 * zoom);
-  camY = player.y - canvas.height / (2 * zoom);
-  camX = Math.max(0, Math.min(WORLD_W - canvas.width / zoom, camX));
-  camY = Math.max(0, Math.min(WORLD_H - canvas.height / zoom, camY));
-
-  zoom += (targetZoom - zoom) * 0.1;
-}
-
-// ────────────────────────────────────────────────
-// DRAW
-// ────────────────────────────────────────────────
-function drawGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Background gradient
-  const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height));
-  if (playerChar === 'Zeus') {
-    grad.addColorStop(0, '#0a001f');
-    grad.addColorStop(0.5, '#1a0033');
-    grad.addColorStop(1, '#000011');
-  } else {
-    grad.addColorStop(0, '#001122');
-    grad.addColorStop(0.5, '#002233');
-    grad.addColorStop(1, '#000811');
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  ctx.translate(-camX * zoom, -camY * zoom);
-  ctx.scale(zoom, zoom);
-
-  // Stars
-  stars.forEach(s => {
-    const alpha = 0.4 + Math.sin(s.phase + performance.now() * 0.001) * 0.4;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
-
-  // Souls (orbs)
-  souls.forEach(s => {
-    const r = s.radius + Math.sin(s.pulse += 0.15) * 4;
-    ctx.shadowColor = s.color;
-    ctx.shadowBlur = 30;
-    ctx.fillStyle = s.color;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.shadowBlur = 15;
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, r * 0.35, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // Particles
-  particles.forEach(p => {
-    ctx.globalAlpha = p.life;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 20 * p.life;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
-
-  // Players (orbs with symbols)
-  [player, opponent].forEach(p => {
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur = 35;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.shadowBlur = 15;
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'white';
-    ctx.font = `${p.size * 1.8}px Orbitron, Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(p.symbol, p.x, p.y);
-  });
-
-  // Poseidon flood water cover
-  if (isFlooding) {
-    ctx.globalAlpha = 0.65 + Math.sin(floodProgress * Math.PI) * 0.35;
-    ctx.fillStyle = 'rgba(0, 100, 255, 0.5)';
-    ctx.fillRect(0, 0, WORLD_W * floodProgress, WORLD_H);
-    ctx.globalAlpha = 1;
-  }
-
-  ctx.restore();
-}
-
 function updateHUD() {
   pScoreEl.textContent = player.score;
   oScoreEl.textContent = opponent.score;
@@ -654,7 +486,6 @@ function updateHUD() {
 
 function endGame() {
   isRunning = false;
-  joystick.classList.remove('visible');
 
   const result = player.score > opponent.score ? 'VICTORY' :
                  player.score < opponent.score ? 'DEFEAT' : 'STALEMATE';
@@ -664,102 +495,6 @@ function endGame() {
 
   gameOverOverlay.classList.remove('hidden');
   hud.classList.add('hidden');
-}
-
-// ────────────────────────────────────────────────
-// INPUT
-// ────────────────────────────────────────────────
-function setupControls() {
-  let joyRect, centerX, centerY;
-
-  function updateJoystick(e) {
-    if (!joystickActive) return;
-    e.preventDefault();
-
-    const tx = e.touches ? e.touches[0].clientX : e.clientX;
-    const ty = e.touches ? e.touches[0].clientY : e.clientY;
-
-    let dx = tx - joyRect.left - centerX;
-    let dy = ty - joyRect.top - centerY;
-    const len = Math.hypot(dx, dy);
-
-    if (len > centerX * 0.85) {
-      dx *= (centerX * 0.85) / len;
-      dy *= (centerX * 0.85) / len;
-    }
-
-    joyKnob.style.left = `${centerX + dx}px`;
-    joyKnob.style.top  = `${centerY + dy}px`;
-
-    player.dx = (dx / centerX) * 8 * player.speedMult;
-    player.dy = (dy / centerY) * 8 * player.speedMult;
-  }
-
-  joyKnob.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    joystickActive = true;
-    joyRect = joystick.getBoundingClientRect();
-    centerX = joyRect.width / 2;
-    centerY = joyRect.height / 2;
-    updateJoystick(e);
-
-    const onMove = ev => updateJoystick(ev);
-    const onUp = () => {
-      joystickActive = false;
-      joyKnob.style.left = '50%';
-      joyKnob.style.top = '50%';
-      player.dx = player.dy = 0;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  });
-
-  // Direct touch follow fallback
-  canvas.addEventListener('pointermove', e => {
-    if (joystickActive) return;
-    if (e.pointerType === 'mouse' && e.buttons !== 1) return;
-
-    const rect = canvas.getBoundingClientRect();
-    player.x = (e.clientX - rect.left) * (WORLD_W / rect.width) + camX;
-    player.y = (e.clientY - rect.top) * (WORLD_H / rect.height) + camY;
-
-    player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
-    player.y = Math.max(20, Math.min(WORLD_H - 20, player.y));
-  });
-
-  // Pinch zoom
-  let initialDist = 0;
-  canvas.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-      initialDist = Math.hypot(
-        e.touches[0].pageX - e.touches[1].pageX,
-        e.touches[0].pageY - e.touches[1].pageY
-      );
-    }
-  }, { passive: false });
-
-  canvas.addEventListener('touchmove', e => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dist = Math.hypot(
-        e.touches[0].pageX - e.touches[1].pageX,
-        e.touches[0].pageY - e.touches[1].pageY
-      );
-      const delta = (dist - initialDist) / 400;
-      targetZoom = Math.max(0.6, Math.min(2.5, targetZoom + delta));
-      initialDist = dist;
-    }
-  }, { passive: false });
-
-  // Wheel zoom
-  canvas.addEventListener('wheel', e => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.2 : 0.2;
-    targetZoom = Math.max(0.6, Math.min(2.5, targetZoom + delta));
-  }, { passive: false });
 }
 
 init();
