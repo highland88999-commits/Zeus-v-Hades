@@ -138,6 +138,21 @@
       z-index:999;
       opacity:0.55;
     }
+
+    .neon-btn {
+      background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan));
+      border: none;
+      color: #000;
+      font-family: inherit;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      box-shadow: 0 0 20px var(--neon-magenta);
+      animation: glitch 4s infinite;
+      padding:1.2rem 3rem;
+      font-size:clamp(1.4rem,4.5vw,2.2rem);
+    }
   </style>
 </head>
 <body>
@@ -175,11 +190,11 @@
     <div class="neon-title">RACE TERMINATED</div>
     <p id="goResult" style="font-size:clamp(2.2rem,7vw,4.5rem); margin:2.5rem 0;"></p>
     <p id="goScore" style="font-size:clamp(1.8rem,5.5vw,3.2rem); color:var(--neon-gold);"></p>
-    <button onclick="location.reload()" style="margin-top:4rem; padding:1.2rem 3rem; font-size:clamp(1.4rem,4.5vw,2.2rem);" class="neon-btn">RE-ENTER NEON REALM</button>
+    <button onclick="location.reload()" class="neon-btn">RE-ENTER NEON REALM</button>
   </div>
 </div>
 
-<audio id="bgm" loop></audio>
+<iframe id="bgm" width="0" height="0" frameborder="0" allow="autoplay"></iframe>
 
 <script>
 // ────────────────────────────────────────────────
@@ -201,7 +216,7 @@ let difficulty = 'medium'; // default
 let playerChar = 'Zeus'; // default
 
 // ────────────────────────────────────────────────
- // STATE
+// STATE
 // ────────────────────────────────────────────────
 let canvas, ctx;
 let player, opponent, souls = [], particles = [], stars = [];
@@ -212,9 +227,10 @@ let isRunning = false;
 let floodProgress = 0;
 let isFlooding = false;
 let isDragging = false;
+let pointerWorldX = 0, pointerWorldY = 0;
 
 // ────────────────────────────────────────────────
- // DOM
+// DOM
 // ────────────────────────────────────────────────
 const landingOverlay = document.getElementById('landingOverlay');
 const landingVideo = document.getElementById('landingVideo');
@@ -231,31 +247,34 @@ const goScore = document.getElementById('goScore');
 const bgm = document.getElementById('bgm');
 
 // ────────────────────────────────────────────────
- // MUSIC
+// MUSIC
 // ────────────────────────────────────────────────
 const musicTracks = [
-  "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=0&controls=0&loop=1",
-  "https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=0&controls=0&loop=1",
-  "https://www.youtube.com/embed/9bZkp7q19f0?autoplay=1&mute=0&controls=0&loop=1",
+  "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=0&controls=0&loop=1&playlist=dQw4w9WgXcQ",
+  "https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=0&controls=0&loop=1&playlist=jfKfPfyJRdk",
+  "https://www.youtube.com/embed/9bZkp7q19f0?autoplay=1&mute=0&controls=0&loop=1&playlist=9bZkp7q19f0",
 ];
 
 function playRandomMusic() {
   const track = musicTracks[Math.floor(Math.random() * musicTracks.length)];
   bgm.src = track;
-  bgm.volume = 0.5;
-  bgm.muted = false;
-  bgm.play().catch(e => console.log("Autoplay blocked:", e));
 }
 
 // ────────────────────────────────────────────────
- // INIT
+// HELPERS
+// ────────────────────────────────────────────────
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+// ────────────────────────────────────────────────
+// INIT
 // ────────────────────────────────────────────────
 function init() {
   canvas = document.getElementById('gameCanvas');
   ctx = canvas.getContext('2d');
   resize();
   window.addEventListener('resize', resize);
-  createStars();
+  createBgStars();
+  createWorldStars();
 
   // Sequential videos
   landingOverlay.addEventListener('click', () => {
@@ -273,7 +292,20 @@ function init() {
   setupControls();
 }
 
-function createStars() {
+function createBgStars() {
+  const starsDiv = document.getElementById('stars');
+  for (let i = 0; i < 300; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.width = star.style.height = (Math.random() * 1.5 + 0.5) + 'px';
+    star.style.left = (Math.random() * 100) + '%';
+    star.style.top = (Math.random() * 100) + '%';
+    star.style.animationDelay = (Math.random() * 5) + 's';
+    starsDiv.appendChild(star);
+  }
+}
+
+function createWorldStars() {
   for (let i = 0; i < 700; i++) {
     stars.push({
       x: Math.random() * WORLD_W,
@@ -311,7 +343,7 @@ function startCountdown() {
 }
 
 // ────────────────────────────────────────────────
- // RESET
+// RESET
 // ────────────────────────────────────────────────
 function resetGame() {
   timeLeft = GAME_TIME;
@@ -319,10 +351,13 @@ function resetGame() {
   floodProgress = 0;
   isFlooding = false;
 
+  const cfg = DIFFICULTY[difficulty];
+
   player = {
     x: WORLD_W / 2,
     y: WORLD_H / 2,
     baseSpeed: 6,
+    speed: 6,
     speedMult: 1,
     speedEnd: 0,
     size: 34,
@@ -334,7 +369,10 @@ function resetGame() {
   opponent = {
     x: WORLD_W / 2 + (Math.random() - 0.5) * 1400,
     y: WORLD_H / 2 + (Math.random() - 0.5) * 1400,
-    speed: DIFFICULTY[difficulty].aiSpeed,
+    baseSpeed: cfg.aiSpeed,
+    speed: cfg.aiSpeed,
+    speedMult: 1,
+    speedEnd: 0,
     size: 34,
     color: playerChar === 'Zeus' ? '#ff0066' : '#00f0ff',
     symbol: playerChar === 'Zeus' ? '💀' : '⚡',
@@ -349,7 +387,7 @@ function resetGame() {
 }
 
 // ────────────────────────────────────────────────
- // SOUL GENERATOR
+// SOUL GENERATOR
 // ────────────────────────────────────────────────
 function generateSouls(count) {
   const cfg = DIFFICULTY[difficulty];
@@ -373,7 +411,7 @@ function generateSouls(count) {
 }
 
 // ────────────────────────────────────────────────
- // TIMER
+// TIMER
 // ────────────────────────────────────────────────
 function gameTimer() {
   if (!isRunning) return;
@@ -401,10 +439,27 @@ function gameLoop() {
 }
 
 function updateGame() {
-  if (player.speedEnd > Date.now() / 1000) {
-    player.speedMult = 2;
-  } else {
-    player.speedMult = 1;
+  const now = Date.now() / 1000;
+
+  player.speedMult = (player.speedEnd > now) ? 2 : 1;
+  player.speed = player.baseSpeed * player.speedMult;
+
+  opponent.speedMult = (opponent.speedEnd > now) ? 2 : 1;
+  opponent.speed = opponent.baseSpeed * opponent.speedMult;
+
+  if (isDragging) {
+    const dx = pointerWorldX - player.x;
+    const dy = pointerWorldY - player.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > player.speed) {
+      player.x += (dx / d) * player.speed;
+      player.y += (dy / d) * player.speed;
+    } else {
+      player.x = pointerWorldX;
+      player.y = pointerWorldY;
+    }
+    player.x = Math.max(player.size, Math.min(WORLD_W - player.size, player.x));
+    player.y = Math.max(player.size, Math.min(WORLD_H - player.size, player.y));
   }
 
   updateOpponent();
@@ -423,24 +478,209 @@ function updateGame() {
 }
 
 // ────────────────────────────────────────────────
- // CONTROLS (mouse/touch drag)
- // ────────────────────────────────────────────────
+// AI
+// ────────────────────────────────────────────────
+function updateOpponent() {
+  if (!opponent.target || dist(opponent, opponent.target) < opponent.size + opponent.target.radius) {
+    opponent.target = closestSoul(opponent);
+  }
+
+  if (opponent.target) {
+    const dx = opponent.target.x - opponent.x;
+    const dy = opponent.target.y - opponent.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > opponent.speed) {
+      opponent.x += (dx / d) * opponent.speed;
+      opponent.y += (dy / d) * opponent.speed;
+    } else {
+      opponent.x = opponent.target.x;
+      opponent.y = opponent.target.y;
+    }
+  }
+
+  opponent.x = Math.max(opponent.size, Math.min(WORLD_W - opponent.size, opponent.x));
+  opponent.y = Math.max(opponent.size, Math.min(WORLD_H - opponent.size, opponent.y));
+}
+
+function closestSoul(entity) {
+  let minDist = Infinity;
+  let closest = null;
+  souls.forEach(s => {
+    const d = dist(entity, s);
+    if (d < minDist) {
+      minDist = d;
+      closest = s;
+    }
+  });
+  return closest;
+}
+
+// ────────────────────────────────────────────────
+// COLLISIONS
+// ────────────────────────────────────────────────
+function checkCollisions() {
+  souls = souls.filter(s => {
+    if (dist(player, s) < player.size + s.radius) {
+      collectSoul(player, s);
+      return false;
+    }
+    if (dist(opponent, s) < opponent.size + s.radius) {
+      collectSoul(opponent, s);
+      return false;
+    }
+    return true;
+  });
+}
+
+function collectSoul(entity, soul) {
+  if (soul.type === 'speed') {
+    entity.speedEnd = Date.now() / 1000 + 8;
+  } else {
+    entity.score += soul.value;
+  }
+  createParticles(soul.x, soul.y, soul.color);
+}
+
+// ────────────────────────────────────────────────
+// PARTICLES
+// ────────────────────────────────────────────────
+function createParticles(x, y, color) {
+  for (let i = 0; i < 20; i++) {
+    particles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8,
+      life: Math.random() * 30 + 20,
+      color,
+      size: Math.random() * 4 + 2
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => {
+    p.life--;
+    p.x += p.vx;
+    p.y += p.vy;
+    return p.life > 0;
+  });
+}
+
+// ────────────────────────────────────────────────
+// CAMERA
+// ────────────────────────────────────────────────
+function updateCamera() {
+  zoom += (targetZoom - zoom) * 0.05;
+
+  const viewW = canvas.width / zoom;
+  const viewH = canvas.height / zoom;
+
+  camX = player.x - viewW / 2;
+  camY = player.y - viewH / 2;
+
+  camX = Math.max(0, Math.min(WORLD_W - viewW, camX));
+  camY = Math.max(0, Math.min(WORLD_H - viewH, camY));
+}
+
+// ────────────────────────────────────────────────
+// DRAW
+// ────────────────────────────────────────────────
+function drawGame() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(-camX * zoom, -camY * zoom);
+  ctx.scale(zoom, zoom);
+
+  drawBackground();
+  drawWorldStars();
+  souls.forEach(drawSoul);
+  drawEntity(player);
+  drawEntity(opponent);
+  particles.forEach(drawParticle);
+  if (isFlooding) drawFlood();
+
+  ctx.restore();
+}
+
+function drawBackground() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+}
+
+function drawWorldStars() {
+  stars.forEach(s => {
+    const bright = Math.sin(s.phase) * 0.5 + 0.5;
+    s.phase += 0.02;
+    ctx.fillStyle = `rgba(255,255,255,${bright})`;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawSoul(s) {
+  s.pulse += 0.08;
+  const pulse = Math.sin(s.pulse) * 3 + s.radius;
+
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, pulse, 0, Math.PI * 2);
+
+  ctx.shadowColor = s.color;
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = s.color;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawEntity(e) {
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+  ctx.fillStyle = e.color;
+  ctx.fill();
+
+  ctx.font = '40px serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(e.symbol, e.x, e.y);
+}
+
+function drawParticle(p) {
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+  ctx.globalAlpha = p.life / 50;
+  ctx.fillStyle = p.color;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawFlood() {
+  ctx.globalAlpha = floodProgress * 0.7;
+  ctx.fillStyle = 'rgba(0,50,200,1)';
+  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+  ctx.globalAlpha = 1;
+}
+
+// ────────────────────────────────────────────────
+// CONTROLS (mouse/touch drag)
+// ────────────────────────────────────────────────
 function setupControls() {
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    pointerWorldX = camX + (e.clientX - rect.left) / zoom;
+    pointerWorldY = camY + (e.clientY - rect.top) / zoom;
     isDragging = true;
   });
 
   canvas.addEventListener('pointermove', e => {
     if (!isRunning || !isDragging) return;
     e.preventDefault();
-
     const rect = canvas.getBoundingClientRect();
-    player.x = (e.clientX - rect.left) * (WORLD_W / rect.width) + camX;
-    player.y = (e.clientY - rect.top) * (WORLD_H / rect.height) + camY;
-
-    player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
-    player.y = Math.max(20, Math.min(WORLD_H - 20, player.y));
+    pointerWorldX = camX + (e.clientX - rect.left) / zoom;
+    pointerWorldY = camY + (e.clientY - rect.top) / zoom;
   });
 
   canvas.addEventListener('pointerup', () => {
@@ -481,7 +721,7 @@ function updateHUD() {
 
   const min = Math.floor(timeLeft / 60);
   const sec = (timeLeft % 60).toString().padStart(2, '0');
-  timerEl.textContent = `${min}:${sec}`;
+  timerEl.textContent = `\( {min}: \){sec}`;
 }
 
 function endGame() {
@@ -490,7 +730,7 @@ function endGame() {
   const result = player.score > opponent.score ? 'VICTORY' :
                  player.score < opponent.score ? 'DEFEAT' : 'STALEMATE';
 
-  goResult.innerHTML = `<span style="color:${result==='VICTORY' ? 'var(--neon-green)' : 'var(--neon-magenta)'}">${result}</span>`;
+  goResult.innerHTML = `<span style="color:\( {result==='VICTORY' ? 'var(--neon-green)' : 'var(--neon-magenta)'}"> \){result}</span>`;
   goScore.textContent = `YOU ${player.score} • OPP ${opponent.score}`;
 
   gameOverOverlay.classList.remove('hidden');
