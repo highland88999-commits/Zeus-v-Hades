@@ -1,297 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HADES vs ZEUS: NEON SOUL RACE</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=VT323&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --neon-cyan: #00f0ff;
-            --neon-magenta: #ff0066;
-            --neon-green: #39ff14;
-            --neon-yellow: #ffe700;
-            --neon-purple: #c300ff;
-            --joy-size: clamp(110px, 24vh, 180px);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>HADES vs ZEUS • NEON SOUL RACE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=VT323&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --neon-cyan: #00f0ff;
+      --neon-magenta: #ff0066;
+      --neon-gold: #ffe700;
+      --neon-green: #39ff14;
+      --neon-purple: #c300ff;
+    }
 
-        * { box-sizing: border-box; margin:0; padding:0; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      margin:0;
+      overflow:hidden;
+      background:#000;
+      font-family:'Orbitron',sans-serif;
+      color:var(--neon-cyan);
+      height:100dvh;
+      touch-action:none;
+    }
 
-        body {
-            margin: 0;
-            font-family: 'Orbitron', sans-serif;
-            background: #000;
-            color: var(--neon-cyan);
-            overflow: hidden;
-            height: 100dvh;
-            touch-action: none;
-        }
+    #stars {
+      position:fixed;
+      inset:0;
+      background:radial-gradient(ellipse at bottom, #0b001f 0%,#000 100%);
+      z-index:-2;
+      pointer-events:none;
+    }
+    .star {
+      position:absolute;
+      background:white;
+      border-radius:50%;
+      box-shadow:0 0 8px rgba(255,255,255,0.8);
+      animation:twinkle 5s infinite alternate;
+    }
+    @keyframes twinkle { 0%,100%{opacity:0.35} 50%{opacity:0.95} }
 
-        #stars {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(ellipse at bottom, #0b001f 0%, #000 100%);
-            z-index: -2;
-            pointer-events: none;
-        }
+    #gameContainer {
+      position:relative;
+      width:100dvw;
+      height:100dvh;
+      overflow:hidden;
+    }
+    #gameCanvas {
+      display:block;
+      width:100%;
+      height:100%;
+      image-rendering:crisp-edges;
+      touch-action:none;
+    }
 
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255,255,255,0.8);
-            animation: twinkle 5s infinite alternate;
-        }
+    /* Overlays */
+    #landingOverlay,
+    #startVideoOverlay,
+    #gameOverOverlay {
+      position:fixed;
+      inset:0;
+      z-index:100;
+      background:rgba(0,0,0,0.92);
+      backdrop-filter:blur(10px);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      color:var(--neon-cyan);
+      font-size:clamp(1.4rem,5vw,2.8rem);
+      text-align:center;
+      cursor:pointer;
+    }
+    .hidden { display:none !important; }
 
-        @keyframes twinkle { 0%,100% { opacity:0.35; } 50% { opacity: 0.95; } }
+    #countdown {
+      font-size:clamp(8rem,25vw,16rem);
+      font-weight:900;
+      text-shadow:0 0 50px var(--neon-gold),0 0 100px var(--neon-cyan);
+      margin-bottom:1.5rem;
+      animation:pulse 1s infinite alternate;
+    }
+    @keyframes pulse { to { transform:scale(1.08); } }
 
-        #gameContainer {
-            position: relative;
-            width: 100dvw;
-            height: 100dvh;
-            overflow: hidden;
-        }
+    .neon-title {
+      font-size:clamp(4rem,14vw,9rem);
+      font-weight:900;
+      letter-spacing:0.1em;
+      background:linear-gradient(90deg,var(--neon-magenta),var(--neon-cyan),var(--neon-magenta));
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+      text-shadow:0 0 40px var(--neon-magenta);
+      animation:glitch 4s infinite;
+    }
+    @keyframes glitch {
+      0%,100%{text-shadow:5px 0 var(--neon-magenta),-5px 0 var(--neon-cyan)}
+      20%{text-shadow:-5px 0 var(--neon-magenta),5px 0 var(--neon-cyan)}
+      40%{text-shadow:5px 0 var(--neon-cyan),-5px 0 var(--neon-magenta)}
+      60%{text-shadow:-7px 0 var(--neon-magenta),7px 0 var(--neon-cyan)}
+      80%{text-shadow:7px 0 var(--neon-cyan),-7px 0 var(--neon-magenta)}
+    }
 
-        #gameCanvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-        }
+    #hud {
+      position:fixed;
+      top:0; left:0; right:0;
+      padding:clamp(0.8rem,2vw,1.2rem) 2rem;
+      display:flex;
+      justify-content:space-between;
+      background:rgba(0,0,0,0.7);
+      backdrop-filter:blur(14px);
+      z-index:30;
+      font-size:clamp(1.2rem,3.5vw,1.9rem);
+      pointer-events:none;
+    }
+    .score-box {
+      background:rgba(10,10,30,0.75);
+      padding:0.6rem 1.4rem;
+      border-radius:1rem;
+      border:2px solid;
+      box-shadow:0 0 25px;
+    }
+    #playerScore { border-color:var(--neon-cyan); color:var(--neon-cyan); }
+    #oppScore   { border-color:var(--neon-magenta); color:var(--neon-magenta); }
+    #timer      { color:var(--neon-gold); font-weight:900; }
 
-        /* UI Layers */
-        #start-screen,
-        #difficulty-screen,
-        #game-over-screen {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.88);
-            backdrop-filter: blur(12px);
-            z-index: 30;
-            padding: 2rem;
-            text-align: center;
-        }
+    #joystick {
+      position:fixed;
+      bottom:clamp(50px,10vh,90px);
+      right:clamp(50px,10vw,90px);
+      width:clamp(160px,32vw,260px);
+      height:clamp(160px,32vw,260px);
+      z-index:60;
+      opacity:0;
+      transition:opacity 0.7s;
+      pointer-events:none;
+    }
+    #joystick.visible { opacity:1; pointer-events:auto; }
+    #joyBase {
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      background:rgba(255,255,255,0.07);
+      border:4px solid rgba(0,240,255,0.55);
+      box-shadow:inset 0 0 40px rgba(0,240,255,0.35);
+    }
+    #joyKnob {
+      position:absolute;
+      width:38%;
+      height:38%;
+      border-radius:50%;
+      background:radial-gradient(circle at 30% 30%, white, var(--neon-cyan));
+      box-shadow:0 0 40px var(--neon-cyan), inset 0 0 16px white;
+      transform:translate(-50%,-50%);
+      left:50%; top:50%;
+      transition:transform 0.07s;
+    }
 
-        .hidden { display: none !important; }
-
-        h1.glitch {
-            font-size: clamp(3rem, 10vw, 7rem);
-            font-weight: 900;
-            letter-spacing: 0.12em;
-            text-shadow: 0 0 30px var(--neon-magenta), 0 0 60px var(--neon-cyan);
-            background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan), var(--neon-magenta));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: glitch 3s infinite;
-        }
-
-        @keyframes glitch {
-            0%,100% { text-shadow: 4px 0 var(--neon-magenta), -4px 0 var(--neon-cyan); }
-            20%  { text-shadow: -4px 0 var(--neon-magenta), 4px 0 var(--neon-cyan); }
-            40%  { text-shadow: 4px 0 var(--neon-cyan), -4px 0 var(--neon-magenta); }
-            60%  { text-shadow: -6px 0 var(--neon-magenta), 6px 0 var(--neon-cyan); }
-            80%  { text-shadow: 6px 0 var(--neon-cyan), -6px 0 var(--neon-magenta); }
-        }
-
-        .neon-btn {
-            padding: clamp(1.2rem, 5vw, 1.8rem) clamp(2.5rem, 10vw, 4rem);
-            margin: 1.2rem;
-            font-size: clamp(1.3rem, 5vw, 2rem);
-            font-weight: 700;
-            color: white;
-            background: rgba(0,0,0,0.5);
-            border: 3px solid;
-            border-radius: 1.2rem;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 0 35px;
-            position: relative;
-            overflow: hidden;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .neon-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.25), transparent);
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-
-        .neon-btn:hover::before,
-        .neon-btn:active::before { opacity: 1; }
-
-        .neon-btn:hover { transform: scale(1.08); box-shadow: 0 0 60px currentColor !important; }
-
-        #zeus-btn   { border-color: var(--neon-cyan);   box-shadow: 0 0 40px var(--neon-cyan);   background: linear-gradient(135deg, #003366, #001122); }
-        #hades-btn  { border-color: var(--neon-magenta); box-shadow: 0 0 40px var(--neon-magenta); background: linear-gradient(135deg, #330033, #110011); }
-        #easy-btn   { border-color: var(--neon-green);   box-shadow: 0 0 35px var(--neon-green); }
-        #medium-btn { border-color: var(--neon-yellow);  box-shadow: 0 0 35px var(--neon-yellow); }
-        #hard-btn   { border-color: var(--neon-magenta); box-shadow: 0 0 40px var(--neon-magenta); }
-
-        #hud {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(12px);
-            z-index: 25;
-            font-size: clamp(1.1rem, 3.5vw, 1.6rem);
-            pointer-events: none;
-        }
-
-        .score-box {
-            background: rgba(10,10,30,0.7);
-            padding: 0.6rem 1.4rem;
-            border-radius: 1rem;
-            border: 1px solid;
-            box-shadow: 0 0 25px;
-        }
-
-        #player-score-box { border-color: var(--neon-cyan);   color: var(--neon-cyan); }
-        #opponent-score-box { border-color: var(--neon-magenta); color: var(--neon-magenta); }
-
-        #timer { color: var(--neon-yellow); font-weight: 900; }
-
-        #joystick-area {
-            position: fixed;
-            bottom: clamp(30px, 6vh, 60px);
-            right: clamp(30px, 6vw, 60px);
-            width: var(--joy-size);
-            height: var(--joy-size);
-            z-index: 40;
-            opacity: 0;
-            transition: opacity 0.6s ease;
-            pointer-events: none;
-        }
-
-        #joystick-area.visible { opacity: 1; pointer-events: auto; }
-
-        #joystick-base {
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-            border: 3px solid rgba(0,240,255,0.45);
-            box-shadow: inset 0 0 30px rgba(0,240,255,0.3);
-        }
-
-        #joystick-knob {
-            position: absolute;
-            width: 38%;
-            height: 38%;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, white, var(--neon-cyan));
-            box-shadow: 0 0 30px var(--neon-cyan), inset 0 0 12px white;
-            transform: translate(-50%, -50%);
-            left: 50%;
-            top: 50%;
-            transition: transform 0.08s ease;
-        }
-
-        /* Scanlines */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0,0,0,0.28) 2px, rgba(0,0,0,0.28) 4px);
-            pointer-events: none;
-            z-index: 999;
-            opacity: 0.45;
-        }
-    </style>
+    /* Scanlines */
+    body::before {
+      content:'';
+      position:fixed;
+      inset:0;
+      background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,0.32) 2px,rgba(0,0,0,0.32) 4px);
+      pointer-events:none;
+      z-index:999;
+      opacity:0.55;
+    }
+  </style>
 </head>
 <body>
 
 <div id="stars"></div>
 
 <div id="gameContainer">
-    <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
-    <!-- START SCREEN -->
-    <div id="start-screen">
-        <h1 class="glitch">NEON SOUL RACE</h1>
-        <p style="font-size: clamp(1.4rem, 4.5vw, 2.2rem); margin: 2rem 0; text-shadow: 0 0 15px var(--neon-cyan);">ZEUS ⚡ vs HADES 💀</p>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem;">
-            <button id="zeus-btn"  class="neon-btn">⚡ CYBER ZEUS</button>
-            <button id="hades-btn" class="neon-btn">💀 VOID HADES</button>
-        </div>
-    </div>
+  <!-- 1. Landing Video -->
+  <div id="landingOverlay">
+    <video id="landingVideo" playsinline loop muted>
+      <source src="https://www.dropbox.com/scl/fi/9mz9tl38fbz6f0e1tj30y/Make_it_epic._H-3.mp4?rlkey=4rk9zotckomw7ugprgdp8lro1&st=ejqlz1hl&raw=1" type="video/mp4" />
+    </video>
+    <div class="neon-title">CLICK TO ENTER THE VOID</div>
+  </div>
 
-    <!-- DIFFICULTY SCREEN -->
-    <div id="difficulty-screen" class="hidden">
-        <h1 class="glitch" style="font-size: clamp(2.8rem, 9vw, 5.5rem);">CHOOSE PATH</h1>
-        <div style="margin: 3rem 0; display: flex; flex-direction: column; gap: 1.8rem; width: min(90%, 420px);">
-            <button class="neon-btn" id="easy-btn">SEEKER (Easy)</button>
-            <button class="neon-btn" id="medium-btn">ON THE PATH (Medium)</button>
-            <button class="neon-btn" id="hard-btn">MASTER (Expert)</button>
-        </div>
-    </div>
+  <!-- 2. Start Video + 3s Countdown -->
+  <div id="startVideoOverlay" class="hidden">
+    <video id="startVideo" playsinline>
+      <source src="https://www.dropbox.com/scl/fi/4r1tkm2o12essg59t5iyk/Make_it_epic._H-2.mp4?rlkey=rcv76t3n3vyouwkp96a16mkyi&st=07jeqjbn&raw=1" type="video/mp4" />
+    </video>
+    <div id="countdown">3</div>
+  </div>
 
-    <!-- HUD -->
-    <div id="hud" class="hidden">
-        <div id="player-score-box" class="score-box">
-            YOU: <span id="player-score">0</span>
-        </div>
-        <div id="timer">2:00</div>
-        <div id="opponent-score-box" class="score-box">
-            OPP: <span id="opponent-score">0</span>
-        </div>
-    </div>
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="playerScore" class="score-box">YOU: <span id="pScore">0</span></div>
+    <div id="timer">2:00</div>
+    <div id="oppScore" class="score-box">OPP: <span id="oScore">0</span></div>
+  </div>
 
-    <!-- GAME OVER -->
-    <div id="game-over-screen" class="hidden">
-        <h1 class="glitch">RACE TERMINATED</h1>
-        <p id="final-result" style="font-size: clamp(1.6rem, 5vw, 2.8rem); margin: 2rem 0;"></p>
-        <p id="final-score-text" style="font-size: clamp(1.4rem, 4vw, 2.2rem); color: var(--neon-yellow);"></p>
-        <button id="restart-btn" class="neon-btn" style="margin-top: 3rem;">RE-ENTER THE ARENA</button>
+  <!-- Joystick -->
+  <div id="joystick">
+    <div id="joyBase">
+      <div id="joyKnob"></div>
     </div>
+  </div>
 
-    <!-- Joystick -->
-    <div id="joystick-area">
-        <div id="joystick-base">
-            <div id="joystick-knob"></div>
-        </div>
-    </div>
+  <!-- Game Over -->
+  <div id="gameOverOverlay" class="hidden">
+    <div class="neon-title">RACE TERMINATED</div>
+    <p id="goResult" style="font-size:clamp(2.2rem,7vw,4.5rem); margin:2.5rem 0;"></p>
+    <p id="goScore" style="font-size:clamp(1.8rem,5.5vw,3.2rem); color:var(--neon-gold);"></p>
+    <button onclick="location.reload()" style="margin-top:4rem; padding:1.2rem 3rem; font-size:clamp(1.4rem,4.5vw,2.2rem);" class="neon-btn">RE-ENTER NEON REALM</button>
+  </div>
 </div>
+
+<audio id="bgm" loop></audio>
 
 <script>
 // ────────────────────────────────────────────────
 // CONFIG
 // ────────────────────────────────────────────────
-const WORLD_W = 4800;
-const WORLD_H = 3600;
-const GAME_DURATION = 120;          // 2 minutes
-const POSEIDON_INTERVAL = 30;       // every 30s
-const SOUL_COUNT_BASE = 80;
+const WORLD_W = 5200;
+const WORLD_H = 3900;
+const GAME_TIME = 120;
+const POSEIDON_INTERVAL = 30;
+const BASE_SOULS = 90;
 
 const DIFFICULTY = {
-    easy:   { aiSpeed: 4.2, aiAggression: 0.6, redChance: 0.15 },
-    medium: { aiSpeed: 5.4, aiAggression: 0.85, redChance: 0.25 },
-    hard:   { aiSpeed: 6.8, aiAggression: 1.0,  redChance: 0.40 }
+  easy:   { aiSpeed:4.3, redChance:0.14, powerChance:0.07, speedChance:0.10 },
+  medium: { aiSpeed:5.7, redChance:0.26, powerChance:0.05, speedChance:0.08 },
+  hard:   { aiSpeed:7.2, redChance:0.38, powerChance:0.04, speedChance:0.06 }
 };
 
-let difficulty = null; // 'easy' | 'medium' | 'hard'
+let difficulty = null;
+let playerChar = null;
 
 // ────────────────────────────────────────────────
 // STATE
 // ────────────────────────────────────────────────
 let canvas, ctx;
 let player, opponent, souls = [], particles = [], stars = [];
-let camX = 0, camY = 0;
-let timeRemaining = GAME_DURATION;
+let camX = 0, camY = 0, zoom = 1, targetZoom = 1;
+let timeLeft = GAME_TIME;
 let poseidonTimer = POSEIDON_INTERVAL;
 let isRunning = false;
 let joystickActive = false;
@@ -300,436 +254,478 @@ let lastTouchId = null;
 // ────────────────────────────────────────────────
 // DOM
 // ────────────────────────────────────────────────
-const startScreen      = document.getElementById('start-screen');
-const difficultyScreen = document.getElementById('difficulty-screen');
-const gameOverScreen   = document.getElementById('game-over-screen');
+const landingOverlay   = document.getElementById('landingOverlay');
+const landingVideo     = document.getElementById('landingVideo');
+const startOverlay     = document.getElementById('startVideoOverlay');
+const startVideo       = document.getElementById('startVideo');
+const countdownEl      = document.getElementById('countdown');
 const hud              = document.getElementById('hud');
-const joystickArea     = document.getElementById('joystick-area');
-const joystickKnob     = document.getElementById('joystick-knob');
-const playerScoreEl    = document.getElementById('player-score');
-const opponentScoreEl  = document.getElementById('opponent-score');
+const joystick         = document.getElementById('joystick');
+const joyKnob          = document.getElementById('joyKnob');
+const pScoreEl         = document.getElementById('pScore');
+const oScoreEl         = document.getElementById('oScore');
 const timerEl          = document.getElementById('timer');
-const finalResultEl    = document.getElementById('final-result');
-const finalScoreEl     = document.getElementById('final-score-text');
-const restartBtn       = document.getElementById('restart-btn');
+const gameOverOverlay  = document.getElementById('gameOverOverlay');
+const goResult         = document.getElementById('goResult');
+const goScore          = document.getElementById('goScore');
+const bgm              = document.getElementById('bgm');
 
 // ────────────────────────────────────────────────
-// INIT
+// MUSIC – random selection
+// ────────────────────────────────────────────────
+const musicTracks = [
+  "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=0&controls=0&loop=1",
+  "https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=0&controls=0&loop=1",
+  "https://www.youtube.com/embed/9bZkp7q19f0?autoplay=1&mute=0&controls=0&loop=1",
+  // You can add more cyberpunk/epic tracks here
+];
+
+function playRandomMusic() {
+  const track = musicTracks[Math.floor(Math.random() * musicTracks.length)];
+  bgm.src = track;
+  bgm.volume = 0.4;
+  bgm.play().catch(e => console.log("Autoplay blocked:", e));
+}
+
+// ────────────────────────────────────────────────
+// INIT & RESIZE
 // ────────────────────────────────────────────────
 function init() {
-    canvas = document.getElementById('gameCanvas');
-    ctx = canvas.getContext('2d');
+  canvas = document.getElementById('gameCanvas');
+  ctx = canvas.getContext('2d');
+  resize();
+  window.addEventListener('resize', resize);
+  createStars();
 
-    createBackgroundStars();
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    // Button listeners
-    document.getElementById('zeus-btn').onclick  = () => showDifficulty('Zeus');
-    document.getElementById('hades-btn').onclick = () => showDifficulty('Hades');
-
-    document.getElementById('easy-btn').onclick   = () => startRace('easy');
-    document.getElementById('medium-btn').onclick = () => startRace('medium');
-    document.getElementById('hard-btn').onclick   = () => startRace('hard');
-
-    restartBtn.onclick = () => {
-        gameOverScreen.classList.add('hidden');
-        startScreen.classList.remove('hidden');
-    };
-
-    setupControls();
-}
-
-function createBackgroundStars() {
-    for (let i = 0; i < 600; i++) {
-        stars.push({
-            x: Math.random() * WORLD_W,
-            y: Math.random() * WORLD_H,
-            size: Math.random() * 2.2 + 0.4,
-            phase: Math.random() * Math.PI * 2,
-            speed: Math.random() * 0.015 + 0.004
-        });
+  // Landing video → game start flow
+  landingOverlay.addEventListener('click', () => {
+    if (landingVideo.paused) {
+      landingVideo.play().catch(() => {});
+    } else {
+      landingOverlay.classList.add('hidden');
+      startOverlay.classList.remove('hidden');
+      startVideo.play().catch(() => {});
+      startCountdown();
     }
+  });
+
+  setupControls();
 }
 
-function resizeCanvas() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
+function createStars() {
+  for (let i = 0; i < 700; i++) {
+    stars.push({
+      x: Math.random() * WORLD_W,
+      y: Math.random() * WORLD_H,
+      size: Math.random() * 2.2 + 0.5,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
 }
 
-// ────────────────────────────────────────────────
-// GAME FLOW
-// ────────────────────────────────────────────────
-function showDifficulty(char) {
-    startScreen.classList.add('hidden');
-    difficultyScreen.classList.remove('hidden');
-    playerChar = char;
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 
-let playerChar = null;
-
-function startRace(diff) {
-    difficulty = diff;
-    difficultyScreen.classList.add('hidden');
-    hud.classList.remove('hidden');
-    joystickArea.classList.add('visible');
-
-    resetGameState();
-    isRunning = true;
-    requestAnimationFrame(loop);
-    setInterval(gameTimer, 1000);
-}
-
-function resetGameState() {
-    timeRemaining = GAME_DURATION;
-    poseidonTimer = POSEIDON_INTERVAL;
-
-    player = {
-        x: WORLD_W / 2,
-        y: WORLD_H / 2,
-        size: 28,
-        color: playerChar === 'Zeus' ? '#00e0ff' : '#ff1088',
-        symbol: playerChar === 'Zeus' ? '⚡' : '💀',
-        score: 0
-    };
-
-    opponent = {
-        x: WORLD_W / 2 + (Math.random()-0.5)*800,
-        y: WORLD_H / 2 + (Math.random()-0.5)*800,
-        size: 28,
-        color: playerChar === 'Zeus' ? '#ff1088' : '#00e0ff',
-        symbol: playerChar === 'Zeus' ? '💀' : '⚡',
-        score: 0,
-        target: null
-    };
-
-    souls = [];
-    particles = [];
-
-    spawnSouls(SOUL_COUNT_BASE);
-    updateHUD();
+function startCountdown() {
+  let cd = 3;
+  countdownEl.textContent = cd;
+  const interval = setInterval(() => {
+    cd--;
+    countdownEl.textContent = cd;
+    if (cd <= 0) {
+      clearInterval(interval);
+      startOverlay.classList.add('hidden');
+      hud.classList.remove('hidden');
+      joystick.classList.add('visible');
+      resetGame();
+      isRunning = true;
+      requestAnimationFrame(gameLoop);
+      setInterval(gameTimer, 1000);
+      playRandomMusic();
+    }
+  }, 1000);
 }
 
 // ────────────────────────────────────────────────
-// GAME TIMER
+// GAME RESET
+// ────────────────────────────────────────────────
+function resetGame() {
+  timeLeft = GAME_TIME;
+  poseidonTimer = POSEIDON_INTERVAL;
+
+  player = {
+    x: WORLD_W / 2,
+    y: WORLD_H / 2,
+    baseSpeed: 6,
+    speedMult: 1,
+    speedEnd: 0,
+    size: 34,
+    color: playerChar === 'Zeus' ? '#00f0ff' : '#ff0066',
+    symbol: playerChar === 'Zeus' ? '⚡' : '💀',
+    score: 0
+  };
+
+  opponent = {
+    x: WORLD_W / 2 + (Math.random() - 0.5) * 1400,
+    y: WORLD_H / 2 + (Math.random() - 0.5) * 1400,
+    speed: DIFFICULTY[difficulty].aiSpeed,
+    size: 34,
+    color: playerChar === 'Zeus' ? '#ff0066' : '#00f0ff',
+    symbol: playerChar === 'Zeus' ? '💀' : '⚡',
+    score: 0,
+    target: null
+  };
+
+  souls = [];
+  particles = [];
+  spawnSouls(BASE_SOULS);
+  updateHUD();
+}
+
+// ────────────────────────────────────────────────
+// TIMER & POSEIDON
 // ────────────────────────────────────────────────
 function gameTimer() {
-    if (!isRunning) return;
-    timeRemaining--;
-    poseidonTimer--;
-
-    if (poseidonTimer <= 0) {
-        triggerPoseidonFlood();
-        poseidonTimer = POSEIDON_INTERVAL;
-    }
-
-    if (timeRemaining <= 0) {
-        endGame();
-    }
-
-    updateHUD();
+  if (!isRunning) return;
+  timeLeft--;
+  poseidonTimer--;
+  if (poseidonTimer <= 0) {
+    triggerPoseidonFlood();
+    poseidonTimer = POSEIDON_INTERVAL;
+  }
+  if (timeLeft <= 0) endGame();
+  updateHUD();
 }
 
-// ────────────────────────────────────────────────
-// POSEIDON FLOOD
-// ────────────────────────────────────────────────
 function triggerPoseidonFlood() {
-    souls = [];
-    for (let i = 0; i < 15; i++) {
-        addParticleBurst(WORLD_W/2 + (Math.random()-0.5)*WORLD_W*0.7,
-                         WORLD_H/2 + (Math.random()-0.5)*WORLD_H*0.7,
-                         '#00aaff', 40);
-    }
-    setTimeout(() => spawnSouls(SOUL_COUNT_BASE), 1800);
+  souls = [];
+  for (let i = 0; i < 30; i++) {
+    addParticles(WORLD_W / 2 + (Math.random() - 0.5) * WORLD_W * 0.8,
+                 WORLD_H / 2 + (Math.random() - 0.5) * WORLD_H * 0.8,
+                 '#0099ff', 50);
+  }
+  setTimeout(() => spawnSouls(BASE_SOULS + 25), 2200);
 }
 
 // ────────────────────────────────────────────────
-// SPAWN & COLLECT
+// SPAWN SOULS
 // ────────────────────────────────────────────────
 function spawnSouls(count) {
-    const cfg = DIFFICULTY[difficulty];
-    for (let i = 0; i < count; i++) {
-        const isRed = Math.random() < cfg.redChance;
-        souls.push({
-            x: Math.random() * WORLD_W,
-            y: Math.random() * WORLD_H,
-            radius: 12,
-            color: isRed ? '#ff4444' : '#88ddff',
-            value: isRed ? -25 : 100,
-            pulse: Math.random() * Math.PI * 2
-        });
-    }
-}
+  const cfg = DIFFICULTY[difficulty];
+  for (let i = 0; i < count; i++) {
+    const r = Math.random();
+    let type = 'blue', val = 100, col = '#88ddff', rad = 12;
+    if (r < cfg.redChance)       { type='red';   val=-25; col='#ff4444'; rad=13; }
+    else if (r < cfg.redChance + cfg.powerChance) { type='power'; val=250; col='#ffd700'; rad=18; }
+    else if (r < cfg.redChance + cfg.powerChance + cfg.speedChance) { type='speed'; val=0; col='#00aaff'; rad=15; }
 
-function collectSoul(soul, collector) {
-    collector.score += soul.value;
-    addParticleBurst(soul.x, soul.y, soul.color, 24);
-    if (navigator.vibrate) navigator.vibrate(soul.value > 0 ? 40 : 80);
+    souls.push({
+      x: Math.random() * WORLD_W,
+      y: Math.random() * WORLD_H,
+      radius: rad,
+      color: col,
+      value: val,
+      type,
+      pulse: Math.random() * Math.PI * 2
+    });
+  }
 }
 
 // ────────────────────────────────────────────────
-// MAIN LOOP
+// MAIN GAME LOOP
 // ────────────────────────────────────────────────
-function loop(ts) {
-    if (!isRunning) return;
+function gameLoop() {
+  if (!isRunning) return;
 
-    update();
-    draw();
+  updateGame();
+  drawGame();
 
-    requestAnimationFrame(loop);
+  requestAnimationFrame(gameLoop);
 }
 
-function update() {
-    // Player follows touch / joystick exactly
-    // (handled in touch events below)
+function updateGame() {
+  // Player movement (joystick or direct touch)
+  if (player.speedEnd > Date.now() / 1000) {
+    player.speedMult = 2.2;
+  } else {
+    player.speedMult = 1;
+  }
 
-    updateOpponent();
-    checkCollections();
-    updateParticles();
+  // Opponent AI
+  updateOpponent();
+
+  // Collisions
+  checkCollisions();
+
+  // Particles
+  updateParticles();
+
+  // Camera + zoom
+  updateCamera();
 }
 
 function updateOpponent() {
-    const cfg = DIFFICULTY[difficulty];
+  const cfg = DIFFICULTY[difficulty];
+  if (!opponent.target || !souls.includes(opponent.target)) {
+    if (souls.length === 0) return;
+    opponent.target = souls.reduce((best, s) => {
+      const d1 = Math.hypot(opponent.x - best.x, opponent.y - best.y);
+      const d2 = Math.hypot(opponent.x - s.x, opponent.y - s.y);
+      return d2 < d1 ? s : best;
+    }, souls[0]);
+  }
 
-    if (!opponent.target || !souls.includes(opponent.target)) {
-        if (souls.length === 0) return;
-        opponent.target = souls.reduce((best, s) => {
-            const d1 = Math.hypot(opponent.x - best.x, opponent.y - best.y);
-            const d2 = Math.hypot(opponent.x - s.x,     opponent.y - s.y);
-            return d2 < d1 ? s : best;
-        }, souls[0]);
+  const dx = opponent.target.x - opponent.x;
+  const dy = opponent.target.y - opponent.y;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist > 8) {
+    opponent.x += (dx / dist) * cfg.aiSpeed;
+    opponent.y += (dy / dist) * cfg.aiSpeed;
+  } else {
+    const idx = souls.indexOf(opponent.target);
+    if (idx !== -1) {
+      opponent.score += souls[idx].value;
+      addParticles(souls[idx].x, souls[idx].y, souls[idx].color, 28);
+      souls.splice(idx, 1);
+      opponent.target = null;
     }
-
-    const dx = opponent.target.x - opponent.x;
-    const dy = opponent.target.y - opponent.y;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist > 6) {
-        const speed = cfg.aiSpeed * (cfg.aiAggression + Math.random()*0.2);
-        opponent.x += (dx / dist) * speed;
-        opponent.y += (dy / dist) * speed;
-    } else {
-        // collect
-        const idx = souls.indexOf(opponent.target);
-        if (idx !== -1) {
-            collectSoul(souls[idx], opponent);
-            souls.splice(idx, 1);
-            opponent.target = null;
-        }
-    }
-
-    // boundary
-    opponent.x = Math.max(20, Math.min(WORLD_W-20, opponent.x));
-    opponent.y = Math.max(20, Math.min(WORLD_H-20, opponent.y));
+  }
 }
 
-function checkCollections() {
-    for (let i = souls.length - 1; i >= 0; i--) {
-        const s = souls[i];
-        const pd = Math.hypot(player.x - s.x, player.y - s.y);
-        if (pd < 36) {
-            collectSoul(s, player);
-            souls.splice(i, 1);
-        }
+function checkCollisions() {
+  for (let i = souls.length - 1; i >= 0; i--) {
+    const s = souls[i];
+    const d = Math.hypot(player.x - s.x, player.y - s.y);
+    if (d < player.size + s.radius + 12) {
+      player.score += s.value;
+      addParticles(s.x, s.y, s.color, s.type === 'power' ? 50 : s.type === 'speed' ? 35 : 25);
+      if (s.type === 'speed') player.speedEnd = Date.now() / 1000 + 5;
+      souls.splice(i, 1);
+      if (navigator.vibrate) navigator.vibrate(s.value > 0 ? 60 : 120);
     }
+  }
 }
 
 function updateParticles() {
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 0.018;
-        if (p.life <= 0) particles.splice(i, 1);
-    }
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life -= 0.018;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
 }
 
-function addParticleBurst(x, y, color, count = 30) {
-    for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const spd = Math.random() * 9 + 3;
-        particles.push({
-            x, y,
-            vx: Math.cos(angle) * spd,
-            vy: Math.sin(angle) * spd,
-            life: 1,
-            color,
-            size: Math.random() * 5 + 2
-        });
-    }
+function addParticles(x, y, color, count = 30) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = Math.random() * 10 + 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1,
+      color,
+      size: Math.random() * 6 + 2
+    });
+  }
+}
+
+// ────────────────────────────────────────────────
+// CAMERA + ZOOM
+// ────────────────────────────────────────────────
+function updateCamera() {
+  camX = player.x - canvas.width / (2 * zoom);
+  camY = player.y - canvas.height / (2 * zoom);
+  camX = Math.max(0, Math.min(WORLD_W - canvas.width / zoom, camX));
+  camY = Math.max(0, Math.min(WORLD_H - canvas.height / zoom, camY));
+
+  zoom += (targetZoom - zoom) * 0.1;
 }
 
 // ────────────────────────────────────────────────
 // RENDER
 // ────────────────────────────────────────────────
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawGame() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background gradient (arena style changes per character)
-    const grad = ctx.createRadialGradient(
-        canvas.width/2, canvas.height/2, 0,
-        canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)
-    );
+  // Background gradient
+  const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0,
+                                         canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height));
+  if (playerChar === 'Zeus') {
+    grad.addColorStop(0, '#0a001f');
+    grad.addColorStop(0.5, '#1a0033');
+    grad.addColorStop(1, '#000011');
+  } else {
+    grad.addColorStop(0, '#001122');
+    grad.addColorStop(0.5, '#002233');
+    grad.addColorStop(1, '#000811');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (playerChar === 'Zeus') {
-        // Underworld dome – dark purple / blue
-        grad.addColorStop(0, '#0a001f');
-        grad.addColorStop(0.4, '#1a0033');
-        grad.addColorStop(1, '#000011');
-    } else {
-        // Cyber cityscape – dark teal / cyan
-        grad.addColorStop(0, '#001122');
-        grad.addColorStop(0.4, '#002233');
-        grad.addColorStop(1, '#000811');
-    }
+  ctx.save();
+  ctx.translate(-camX * zoom, -camY * zoom);
+  ctx.scale(zoom, zoom);
 
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Stars
+  stars.forEach(s => {
+    const alpha = 0.4 + Math.sin(s.phase + performance.now() * 0.001) * 0.4;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 
-    ctx.save();
-    ctx.translate(-camX, -camY);
+  // Souls
+  souls.forEach(s => {
+    const r = s.radius + Math.sin(s.pulse += 0.15) * 4;
+    ctx.shadowColor = s.color;
+    ctx.shadowBlur = 30;
+    ctx.fillStyle = s.color;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Stars
-    stars.forEach(s => {
-        const alpha = 0.4 + Math.sin(s.phase + performance.now()*0.0008) * 0.4;
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
-    // Souls
-    souls.forEach(s => {
-        const r = s.radius + Math.sin(s.pulse += 0.14) * 3;
-        ctx.shadowColor = s.color;
-        ctx.shadowBlur = 25;
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, r, 0, Math.PI*2);
-        ctx.fill();
+  // Particles
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 20 * p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 
-        ctx.shadowBlur = 12;
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, r*0.4, 0, Math.PI*2);
-        ctx.fill();
-    });
+  // Players
+  [player, opponent].forEach(p => {
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 35;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Particles
-    particles.forEach(p => {
-        ctx.globalAlpha = p.life;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 18 * p.life;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Players
-    [player, opponent].forEach(p => {
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 30;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-        ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'white';
+    ctx.font = `${p.size * 1.8}px Orbitron, Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.symbol, p.x, p.y);
+  });
 
-        ctx.shadowBlur = 12;
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size*0.45, 0, Math.PI*2);
-        ctx.fill();
-
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = 'white';
-        ctx.font = `${p.size*1.6}px Orbitron, Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(p.symbol, p.x, p.y);
-    });
-
-    ctx.restore();
+  ctx.restore();
 }
 
-// ────────────────────────────────────────────────
-// CONTROLS – Touch follows exactly
-// ────────────────────────────────────────────────
-function setupControls() {
-    function pointerMove(e) {
-        if (!isRunning) return;
-        e.preventDefault();
-
-        const touches = e.touches || [e];
-        for (const touch of touches) {
-            const rect = canvas.getBoundingClientRect();
-            const tx = (touch.clientX - rect.left) * (WORLD_W / rect.width) + camX;
-            const ty = (touch.clientY - rect.top)  * (WORLD_H / rect.height) + camY;
-
-            player.x = tx;
-            player.y = ty;
-
-            // clamp
-            player.x = Math.max(20, Math.min(WORLD_W-20, player.x));
-            player.y = Math.max(20, Math.min(WORLD_H-20, player.y));
-        }
-    }
-
-    canvas.addEventListener('touchstart', pointerMove, { passive: false });
-    canvas.addEventListener('touchmove',  pointerMove, { passive: false });
-
-    // Optional mouse support for desktop testing
-    canvas.addEventListener('mousemove', e => {
-        if (e.buttons !== 1) return;
-        pointerMove(e);
-    });
-}
-
-// ────────────────────────────────────────────────
-// CAMERA – follows player tightly
-// ────────────────────────────────────────────────
-function updateCamera() {
-    camX = player.x - canvas.width  / 2;
-    camY = player.y - canvas.height / 2;
-
-    camX = Math.max(0, Math.min(WORLD_W - canvas.width,  camX));
-    camY = Math.max(0, Math.min(WORLD_H - canvas.height, camY));
-}
-
-// ────────────────────────────────────────────────
-// HUD & END
-// ────────────────────────────────────────────────
 function updateHUD() {
-    playerScoreEl.textContent   = player.score;
-    opponentScoreEl.textContent = opponent.score;
+  pScoreEl.textContent = player.score;
+  oScoreEl.textContent = opponent.score;
 
-    const min = Math.floor(timeRemaining / 60);
-    const sec = (timeRemaining % 60).toString().padStart(2,'0');
-    timerEl.textContent = `${min}:${sec}`;
+  const min = Math.floor(timeLeft / 60);
+  const sec = (timeLeft % 60).toString().padStart(2, '0');
+  timerEl.textContent = `${min}:${sec}`;
 }
 
 function endGame() {
-    isRunning = false;
-    joystickArea.classList.remove('visible');
+  isRunning = false;
+  joystick.classList.remove('visible');
 
-    const diff = difficulty.toUpperCase();
-    const result = player.score > opponent.score ? 'VICTORY' :
-                   player.score < opponent.score ? 'DEFEAT' : 'DRAW';
+  const result = player.score > opponent.score ? 'VICTORY' :
+                 player.score < opponent.score ? 'DEFEAT' : 'STALEMATE';
 
-    finalResultEl.innerHTML = `<span style="color:${result==='VICTORY'?'var(--neon-green)':'var(--neon-magenta)'}">${result} – ${diff}</span>`;
-    finalScoreEl.textContent = `YOU ${player.score} • OPP ${opponent.score}`;
+  goResult.innerHTML = `<span style="color:${result==='VICTORY' ? 'var(--neon-green)' : 'var(--neon-magenta)'}">${result}</span>`;
+  goScore.textContent = `YOU ${player.score} • OPP ${opponent.score}`;
 
-    gameOverScreen.classList.remove('hidden');
-    hud.classList.add('hidden');
+  gameOverOverlay.classList.remove('hidden');
+  hud.classList.add('hidden');
 }
 
 // ────────────────────────────────────────────────
-// START
+// CONTROLS (fixed joystick + direct touch fallback)
 // ────────────────────────────────────────────────
-window.onload = init;
+function setupControls() {
+  let joyRect, centerX, centerY;
+
+  function updateJoystick(e) {
+    if (!joystickActive) return;
+    e.preventDefault();
+
+    const tx = e.touches ? e.touches[0].clientX : e.clientX;
+    const ty = e.touches ? e.touches[0].clientY : e.clientY;
+
+    let dx = tx - joyRect.left - centerX;
+    let dy = ty - joyRect.top - centerY;
+    const len = Math.hypot(dx, dy);
+
+    if (len > centerX * 0.85) {
+      dx *= (centerX * 0.85) / len;
+      dy *= (centerX * 0.85) / len;
+    }
+
+    joyKnob.style.left = `${centerX + dx}px`;
+    joyKnob.style.top  = `${centerY + dy}px`;
+
+    player.dx = (dx / centerX) * 8 * player.speedMult;
+    player.dy = (dy / centerY) * 8 * player.speedMult;
+  }
+
+  joyKnob.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    joystickActive = true;
+    joyRect = joystick.getBoundingClientRect();
+    centerX = joyRect.width / 2;
+    centerY = joyRect.height / 2;
+    updateJoystick(e);
+
+    const onMove = ev => updateJoystick(ev);
+    const onUp = () => {
+      joystickActive = false;
+      joyKnob.style.left = '50%';
+      joyKnob.style.top = '50%';
+      player.dx = player.dy = 0;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  // Direct touch follow (when joystick not active)
+  canvas.addEventListener('pointermove', e => {
+    if (joystickActive) return;
+    if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+
+    const rect = canvas.getBoundingClientRect();
+    player.x = (e.clientX - rect.left) * (WORLD_W / rect.width) + camX;
+    player.y = (e.clientY - rect.top) * (WORLD_H / rect.height) + camY;
+
+    player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
+    player.y = Math.max(20, Math.min(WORLD_H - 20, player.y));
+  });
+}
+
+init();
 </script>
 </body>
 </html>
