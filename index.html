@@ -16,7 +16,25 @@
       --neon-purple: #c300ff;
     }
 
-    * { margin:0; padding:0; box-sizing:border-box; }
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+      
+      /* The "Lockdown" properties */
+      -webkit-user-select: none;  /* Chrome, Safari, Opera */
+      -moz-user-select: none;     /* Firefox */
+      -ms-user-select: none;      /* IE 10+ */
+      user-select: none;          /* Standard */
+      -webkit-touch-callout: none; /* Prevents long-press "copy image/save" on iOS */
+      -webkit-user-drag: none;    /* Prevents dragging of elements */
+    }
+
+    /* Ensure images/videos specifically don't trigger popups */
+    img, video, canvas {
+      -webkit-touch-callout: none;
+    }
+
     body {
       margin:0;
       overflow:hidden;
@@ -208,6 +226,58 @@
       width: 100%;
       height: 100%;
     }
+
+    #joystick-base {
+      position: fixed;
+      width: 120px;
+      height: 120px;
+      background: rgba(0, 240, 255, 0.1);
+      border: 2px solid var(--neon-cyan);
+      border-radius: 50%;
+      display: none;
+      z-index: 200;
+      pointer-events: none;
+      box-shadow: 0 0 15px var(--neon-cyan);
+    }
+
+    #joystick-knob {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      left: 35px;
+      top: 35px;
+      box-shadow: 0 0 20px var(--neon-cyan);
+    }
+
+    #dash-button {
+      position: fixed;
+      bottom: 40px;
+      right: 180px; /* To the left of the radar */
+      width: 80px;
+      height: 80px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 3px solid var(--neon-gold);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 900;
+      color: var(--neon-gold);
+      cursor: pointer;
+      z-index: 200;
+      box-shadow: 0 0 15px var(--neon-gold);
+      transition: transform 0.1s;
+      user-select: none;
+    }
+
+    #dash-button:active { transform: scale(0.9); }
+    #dash-button.cooldown {
+      opacity: 0.5;
+      filter: grayscale(1);
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -263,6 +333,14 @@
   <div id="radar" class="hidden">
     <canvas id="radarCanvas"></canvas>
   </div>
+
+  <!-- Joystick -->
+  <div id="joystick-base">
+    <div id="joystick-knob"></div>
+  </div>
+
+  <!-- Dash Button -->
+  <div id="dash-button" class="hidden" onclick="triggerDash()">DASH</div>
 </div>
 
 <iframe id="bgm" width="0" height="0" frameborder="0" allow="autoplay"></iframe>
@@ -487,7 +565,12 @@ function resetGame() {
     size: 34,
     color: playerChar === 'Zeus' ? '#00f0ff' : '#ff0066',
     symbol: playerChar === 'Zeus' ? '⚡' : '💀',
-    score: 0
+    score: 0,
+    isDashing: false,
+    dashCooldown: 0,
+    dashEnd: 0,
+    vx: 0,
+    vy: 0
   };
 
   opponent = {
@@ -510,6 +593,7 @@ function resetGame() {
   generateSouls(BASE_SOULS);
   generatePortals(5); // e.g., 5 portals
   updateHUD();
+  document.getElementById('dash-button').classList.remove('hidden');
 }
 
 // ────────────────────────────────────────────────
@@ -581,12 +665,31 @@ function gameLoop() {
 }
 
 function updateGame() {
-  const now = Date.now() / 1000;
+  const now = Date.now();
 
-  player.speedMult = (player.speedEnd > now) ? 2 : 1;
-  player.speed = player.baseSpeed * player.speedMult;
+  // Handle Dash Logic
+  if (player.isDashing && now > player.dashEnd) {
+    player.isDashing = false;
+  }
 
-  opponent.speedMult = (opponent.speedEnd > now) ? 2 : 1;
+  // Speed calculation
+  let currentBaseSpeed = player.baseSpeed * ((player.speedEnd > now / 1000) ? 2 : 1);
+  player.speed = player.isDashing ? currentBaseSpeed * 7 : currentBaseSpeed;
+
+  // Update Button Visuals
+  const btn = document.getElementById('dash-button');
+  if (now < player.dashCooldown) {
+    btn.classList.add('cooldown');
+    const remaining = ((player.dashCooldown - now) / 15000) * 100;
+    btn.style.background = `conic-gradient(var(--neon-gold) ${remaining}%, transparent 0%)`;
+    btn.textContent = Math.ceil((player.dashCooldown - now) / 1000) + "s";
+  } else {
+    btn.classList.remove('cooldown');
+    btn.style.background = 'rgba(0,0,0,0.8)';
+    btn.textContent = "DASH";
+  }
+
+  opponent.speedMult = (opponent.speedEnd > now / 1000) ? 2 : 1;
   opponent.speed = opponent.baseSpeed * opponent.speedMult;
 
   if (isDragging) {
@@ -595,11 +698,19 @@ function updateGame() {
     const d = Math.sqrt(dx * dx + dy * dy);
     if (d > 0) {  // Avoid division by zero
       const moveSpeed = player.speed; // Always move at full speed in the direction
-      player.x += (dx / d) * moveSpeed;
-      player.y += (dy / d) * moveSpeed;
+      player.vx = (dx / d) * moveSpeed;
+      player.vy = (dy / d) * moveSpeed;
+      player.x += player.vx;
+      player.y += player.vy;
+    } else {
+      player.vx = 0;
+      player.vy = 0;
     }
     player.x = Math.max(player.size, Math.min(WORLD_W - player.size, player.x));
     player.y = Math.max(player.size, Math.min(WORLD_H - player.size, player.y));
+  } else {
+    player.vx = 0;
+    player.vy = 0;
   }
 
   updateOpponent();
@@ -908,28 +1019,59 @@ function drawRadar() {
 // CONTROLS (mouse/touch drag)
 // ────────────────────────────────────────────────
 function setupControls() {
+  const base = document.getElementById('joystick-base');
+  const knob = document.getElementById('joystick-knob');
+
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    pointerWorldX = camX + (e.clientX - rect.left) / zoom;
-    pointerWorldY = camY + (e.clientY - rect.top) / zoom;
-    const d = dist({x: pointerWorldX, y: pointerWorldY}, player);
-    if (d < player.size * 10) { // Larger threshold for easier starting
-      isDragging = true;
-    }
+    isDragging = true;
+
+    // Position the joystick UI at the touch point
+    base.style.display = 'block';
+    base.style.left = `${e.clientX - 60}px`;
+    base.style.top = `${e.clientY - 60}px`;
+    knob.style.transform = `translate(0px, 0px)`;
+
+    updatePointerCoords(e);
   });
 
   canvas.addEventListener('pointermove', e => {
     if (!isRunning || !isDragging) return;
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    pointerWorldX = camX + (e.clientX - rect.left) / zoom;
-    pointerWorldY = camY + (e.clientY - rect.top) / zoom;
+
+    const rect = base.getBoundingClientRect();
+    const centerX = rect.left + 60;
+    const centerY = rect.top + 60;
+
+    // Calculate distance from joystick center
+    let dx = e.clientX - centerX;
+    let dy = e.clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+    const maxDist = 50; // Max movement for the knob
+
+    if (dist > maxDist) {
+      dx = (dx / dist) * maxDist;
+      dy = (dy / dist) * maxDist;
+    }
+
+    // Move the knob visually
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    // Update player's target world coordinates based on stick direction
+    pointerWorldX = player.x + dx * 5; 
+    pointerWorldY = player.y + dy * 5;
   });
 
   canvas.addEventListener('pointerup', () => {
     isDragging = false;
+    base.style.display = 'none';
   });
+
+  function updatePointerCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    pointerWorldX = camX + (e.clientX - rect.left) / zoom;
+    pointerWorldY = camY + (e.clientY - rect.top) / zoom;
+  }
 
   // Zoom
   canvas.addEventListener('wheel', e => {
@@ -981,6 +1123,19 @@ function endGame() {
   hud.classList.add('hidden');
   radar.classList.add('hidden');
 }
+
+function triggerDash() {
+  const now = Date.now();
+  if (player.dashCooldown > now) return; // Still on cooldown
+
+  player.isDashing = true;
+  player.dashEnd = now + 1500; // 1.5 seconds of 7x speed
+  player.dashCooldown = now + 15000; // 15 seconds total cooldown
+}
+
+window.addEventListener('contextmenu', function (e) { 
+  e.preventDefault(); 
+}, false);
 
 init();
 </script>
