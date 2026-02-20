@@ -279,9 +279,9 @@ const BASE_SOULS = 90;
 const RADAR_SIZE = 150;
 
 const DIFFICULTY = {
-  easy:   { aiSpeed:4.3, redChance:0.14, powerChance:0.07, speedChance:0.10, purpleChance:0.02, portalChance:0.03 },
-  medium: { aiSpeed:5.7, redChance:0.26, powerChance:0.05, speedChance:0.08, purpleChance:0.015, portalChance:0.025 },
-  hard:   { aiSpeed:7.2, redChance:0.38, powerChance:0.04, speedChance:0.06, purpleChance:0.01, portalChance:0.02 }
+  easy:   { aiSpeed:4.3, redChance:0.14, powerChance:0.07, speedChance:0.10, purpleChance:0.02, portalChance:0.03, playerBoost:2 },
+  medium: { aiSpeed:5.7, redChance:0.26, powerChance:0.05, speedChance:0.08, purpleChance:0.015, portalChance:0.025, playerBoost:1.5 },
+  hard:   { aiSpeed:7.2, redChance:0.38, powerChance:0.04, speedChance:0.06, purpleChance:0.01, portalChance:0.02, playerBoost:1 }
 };
 
 let difficulty = 'medium'; // default
@@ -480,8 +480,8 @@ function resetGame() {
   player = {
     x: WORLD_W / 2,
     y: WORLD_H / 2,
-    baseSpeed: 6,
-    speed: 6,
+    baseSpeed: cfg.aiSpeed * cfg.playerBoost,
+    speed: cfg.aiSpeed * cfg.playerBoost,
     speedMult: 1,
     speedEnd: 0,
     size: 34,
@@ -593,12 +593,10 @@ function updateGame() {
     const dx = pointerWorldX - player.x;
     const dy = pointerWorldY - player.y;
     const d = Math.sqrt(dx * dx + dy * dy);
-    if (d > player.speed) {
-      player.x += (dx / d) * player.speed;
-      player.y += (dy / d) * player.speed;
-    } else {
-      player.x = pointerWorldX;
-      player.y = pointerWorldY;
+    if (d > 0) {  // Avoid division by zero
+      const moveSpeed = Math.min(player.speed, d); // Cap at d to not overshoot, but allow flow
+      player.x += (dx / d) * moveSpeed;
+      player.y += (dy / d) * moveSpeed;
     }
     player.x = Math.max(player.size, Math.min(WORLD_W - player.size, player.x));
     player.y = Math.max(player.size, Math.min(WORLD_H - player.size, player.y));
