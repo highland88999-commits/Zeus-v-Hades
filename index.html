@@ -228,6 +228,8 @@ let floodProgress = 0;
 let isFlooding = false;
 let isDragging = false;
 let pointerWorldX = 0, pointerWorldY = 0;
+let viewW, viewH;
+let isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
 // ────────────────────────────────────────────────
 // DOM
@@ -265,6 +267,18 @@ function playRandomMusic() {
 // ────────────────────────────────────────────────
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
+function isInView(x, y, r = 0) {
+  return x + r > camX && x - r < camX + viewW && y + r > camY && y - r < camY + viewH;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 // ────────────────────────────────────────────────
 // INIT
 // ────────────────────────────────────────────────
@@ -272,7 +286,7 @@ function init() {
   canvas = document.getElementById('gameCanvas');
   ctx = canvas.getContext('2d');
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', debounce(resize, 200));
   createBgStars();
   createWorldStars();
 
@@ -294,7 +308,8 @@ function init() {
 
 function createBgStars() {
   const starsDiv = document.getElementById('stars');
-  for (let i = 0; i < 300; i++) {
+  const numBgStars = isMobile ? 150 : 300;
+  for (let i = 0; i < numBgStars; i++) {
     const star = document.createElement('div');
     star.className = 'star';
     star.style.width = star.style.height = (Math.random() * 1.5 + 0.5) + 'px';
@@ -306,7 +321,8 @@ function createBgStars() {
 }
 
 function createWorldStars() {
-  for (let i = 0; i < 700; i++) {
+  const numWorldStars = isMobile ? 350 : 700;
+  for (let i = 0; i < numWorldStars; i++) {
     stars.push({
       x: Math.random() * WORLD_W,
       y: Math.random() * WORLD_H,
@@ -545,7 +561,8 @@ function collectSoul(entity, soul) {
 // PARTICLES
 // ────────────────────────────────────────────────
 function createParticles(x, y, color) {
-  for (let i = 0; i < 20; i++) {
+  const numParticles = isMobile ? 10 : 20;
+  for (let i = 0; i < numParticles; i++) {
     particles.push({
       x,
       y,
@@ -573,8 +590,8 @@ function updateParticles() {
 function updateCamera() {
   zoom += (targetZoom - zoom) * 0.05;
 
-  const viewW = canvas.width / zoom;
-  const viewH = canvas.height / zoom;
+  viewW = canvas.width / zoom;
+  viewH = canvas.height / zoom;
 
   camX = player.x - viewW / 2;
   camY = player.y - viewH / 2;
@@ -587,79 +604,83 @@ function updateCamera() {
 // DRAW
 // ────────────────────────────────────────────────
 function drawGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
   ctx.translate(-camX * zoom, -camY * zoom);
   ctx.scale(zoom, zoom);
 
-  drawBackground();
   drawWorldStars();
   souls.forEach(drawSoul);
   drawEntity(player);
   drawEntity(opponent);
   particles.forEach(drawParticle);
-  if (isFlooding) drawFlood();
 
   ctx.restore();
-}
 
-function drawBackground() {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+  if (isFlooding) drawFlood();
 }
 
 function drawWorldStars() {
   stars.forEach(s => {
-    const bright = Math.sin(s.phase) * 0.5 + 0.5;
-    s.phase += 0.02;
-    ctx.fillStyle = `rgba(255,255,255,${bright})`;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-    ctx.fill();
+    if (isInView(s.x, s.y, s.size)) {
+      s.phase += 0.02;
+      const bright = Math.sin(s.phase) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(255,255,255,${bright})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
   });
 }
 
 function drawSoul(s) {
-  s.pulse += 0.08;
-  const pulse = Math.sin(s.pulse) * 3 + s.radius;
+  if (isInView(s.x, s.y, s.radius)) {
+    s.pulse += 0.08;
+    const pulse = Math.sin(s.pulse) * 3 + s.radius;
 
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, pulse, 0, Math.PI * 2);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, pulse, 0, Math.PI * 2);
 
-  ctx.shadowColor = s.color;
-  ctx.shadowBlur = 20;
-  ctx.fillStyle = s.color;
-  ctx.fill();
-  ctx.shadowBlur = 0;
+    ctx.shadowColor = s.color;
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
 }
 
 function drawEntity(e) {
-  ctx.beginPath();
-  ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
-  ctx.fillStyle = e.color;
-  ctx.fill();
+  if (isInView(e.x, e.y, e.size)) {
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+    ctx.fillStyle = e.color;
+    ctx.fill();
 
-  ctx.font = '40px serif';
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(e.symbol, e.x, e.y);
+    ctx.font = '40px serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(e.symbol, e.x, e.y);
+  }
 }
 
 function drawParticle(p) {
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-  ctx.globalAlpha = p.life / 50;
-  ctx.fillStyle = p.color;
-  ctx.fill();
-  ctx.globalAlpha = 1;
+  if (isInView(p.x, p.y, p.size)) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.globalAlpha = p.life / 50;
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawFlood() {
   ctx.globalAlpha = floodProgress * 0.7;
   ctx.fillStyle = 'rgba(0,50,200,1)';
-  ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.globalAlpha = 1;
 }
 
