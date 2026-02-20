@@ -914,7 +914,7 @@ function setupControls() {
     pointerWorldX = camX + (e.clientX - rect.left) / zoom;
     pointerWorldY = camY + (e.clientY - rect.top) / zoom;
     const d = dist({x: pointerWorldX, y: pointerWorldY}, player);
-    if (d < player.size * 2) { // Allow starting drag near the player icon
+    if (d < player.size * 10) { // Larger threshold for easier starting
       isDragging = true;
     }
   });
