@@ -594,7 +594,7 @@ function updateGame() {
     const dy = pointerWorldY - player.y;
     const d = Math.sqrt(dx * dx + dy * dy);
     if (d > 0) {  // Avoid division by zero
-      const moveSpeed = Math.min(player.speed, d); // Cap at d to not overshoot, but allow flow
+      const moveSpeed = player.speed; // Always move at full speed in the direction
       player.x += (dx / d) * moveSpeed;
       player.y += (dy / d) * moveSpeed;
     }
@@ -913,7 +913,10 @@ function setupControls() {
     const rect = canvas.getBoundingClientRect();
     pointerWorldX = camX + (e.clientX - rect.left) / zoom;
     pointerWorldY = camY + (e.clientY - rect.top) / zoom;
-    isDragging = true;
+    const d = dist({x: pointerWorldX, y: pointerWorldY}, player);
+    if (d < player.size * 2) { // Allow starting drag near the player icon
+      isDragging = true;
+    }
   });
 
   canvas.addEventListener('pointermove', e => {
