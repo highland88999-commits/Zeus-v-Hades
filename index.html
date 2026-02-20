@@ -179,15 +179,15 @@
 <div id="gameContainer">
   <canvas id="gameCanvas"></canvas>
 
-  <!-- 1. Landing Video -->
+  <!-- Landing Video -->
   <div id="landingOverlay">
-    <video id="landingVideo" playsinline loop muted>
+    <video id="landingVideo" playsinline>
       <source src="https://www.dropbox.com/scl/fi/9mz9tl38fbz6f0e1tj30y/Make_it_epic._H-3.mp4?rlkey=4rk9zotckomw7ugprgdp8lro1&st=ejqlz1hl&raw=1" type="video/mp4" />
     </video>
     <div class="neon-title">CLICK TO ENTER THE VOID</div>
   </div>
 
-  <!-- 2. Start Video + 3s Countdown -->
+  <!-- Start Video + 3s Countdown -->
   <div id="startVideoOverlay" class="hidden">
     <video id="startVideo" playsinline>
       <source src="https://www.dropbox.com/scl/fi/4r1tkm2o12essg59t5iyk/Make_it_epic._H-2.mp4?rlkey=rcv76t3n3vyouwkp96a16mkyi&st=07jeqjbn&raw=1" type="video/mp4" />
@@ -236,8 +236,8 @@ const DIFFICULTY = {
   hard:   { aiSpeed:7.2, redChance:0.38, powerChance:0.04, speedChance:0.06 }
 };
 
-let difficulty = null;
-let playerChar = null;
+let difficulty = 'medium'; // default, can add selection
+let playerChar = 'Zeus'; // default, can add selection
 
 // ────────────────────────────────────────────────
 // STATE
@@ -250,9 +250,11 @@ let poseidonTimer = POSEIDON_INTERVAL;
 let isRunning = false;
 let joystickActive = false;
 let lastTouchId = null;
+let floodProgress = 0;
+let isFlooding = false;
 
 // ────────────────────────────────────────────────
-// DOM
+ // DOM
 // ────────────────────────────────────────────────
 const landingOverlay   = document.getElementById('landingOverlay');
 const landingVideo     = document.getElementById('landingVideo');
@@ -271,24 +273,23 @@ const goScore          = document.getElementById('goScore');
 const bgm              = document.getElementById('bgm');
 
 // ────────────────────────────────────────────────
-// MUSIC – random selection
+ // MUSIC
 // ────────────────────────────────────────────────
 const musicTracks = [
   "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=0&controls=0&loop=1",
   "https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=0&controls=0&loop=1",
   "https://www.youtube.com/embed/9bZkp7q19f0?autoplay=1&mute=0&controls=0&loop=1",
-  // You can add more cyberpunk/epic tracks here
 ];
 
 function playRandomMusic() {
   const track = musicTracks[Math.floor(Math.random() * musicTracks.length)];
   bgm.src = track;
-  bgm.volume = 0.4;
+  bgm.volume = 0.5;
   bgm.play().catch(e => console.log("Autoplay blocked:", e));
 }
 
 // ────────────────────────────────────────────────
-// INIT & RESIZE
+ // INIT
 // ────────────────────────────────────────────────
 function init() {
   canvas = document.getElementById('gameCanvas');
@@ -297,7 +298,7 @@ function init() {
   window.addEventListener('resize', resize);
   createStars();
 
-  // Landing video → game start flow
+  // Landing flow
   landingOverlay.addEventListener('click', () => {
     if (landingVideo.paused) {
       landingVideo.play().catch(() => {});
@@ -349,11 +350,13 @@ function startCountdown() {
 }
 
 // ────────────────────────────────────────────────
-// GAME RESET
+ // RESET GAME
 // ────────────────────────────────────────────────
 function resetGame() {
   timeLeft = GAME_TIME;
   poseidonTimer = POSEIDON_INTERVAL;
+  floodProgress = 0;
+  isFlooding = false;
 
   player = {
     x: WORLD_W / 2,
@@ -385,31 +388,6 @@ function resetGame() {
 }
 
 // ────────────────────────────────────────────────
-// TIMER & POSEIDON
-// ────────────────────────────────────────────────
-function gameTimer() {
-  if (!isRunning) return;
-  timeLeft--;
-  poseidonTimer--;
-  if (poseidonTimer <= 0) {
-    triggerPoseidonFlood();
-    poseidonTimer = POSEIDON_INTERVAL;
-  }
-  if (timeLeft <= 0) endGame();
-  updateHUD();
-}
-
-function triggerPoseidonFlood() {
-  souls = [];
-  for (let i = 0; i < 30; i++) {
-    addParticles(WORLD_W / 2 + (Math.random() - 0.5) * WORLD_W * 0.8,
-                 WORLD_H / 2 + (Math.random() - 0.5) * WORLD_H * 0.8,
-                 '#0099ff', 50);
-  }
-  setTimeout(() => spawnSouls(BASE_SOULS + 25), 2200);
-}
-
-// ────────────────────────────────────────────────
 // SPAWN SOULS
 // ────────────────────────────────────────────────
 function spawnSouls(count) {
@@ -417,9 +395,9 @@ function spawnSouls(count) {
   for (let i = 0; i < count; i++) {
     const r = Math.random();
     let type = 'blue', val = 100, col = '#88ddff', rad = 12;
-    if (r < cfg.redChance)       { type='red';   val=-25; col='#ff4444'; rad=13; }
-    else if (r < cfg.redChance + cfg.powerChance) { type='power'; val=250; col='#ffd700'; rad=18; }
-    else if (r < cfg.redChance + cfg.powerChance + cfg.speedChance) { type='speed'; val=0; col='#00aaff'; rad=15; }
+    if (r < cfg.redChance) { type = 'red'; val = -25; col = '#ff4444'; rad = 13; }
+    else if (r < cfg.redChance + cfg.powerChance) { type = 'power'; val = 250; col = '#ffd700'; rad = 18; }
+    else if (r < cfg.redChance + cfg.powerChance + cfg.speedChance) { type = 'speed'; val = 0; col = '#00aaff'; rad = 15; }
 
     souls.push({
       x: Math.random() * WORLD_W,
@@ -434,7 +412,23 @@ function spawnSouls(count) {
 }
 
 // ────────────────────────────────────────────────
-// MAIN GAME LOOP
+ // GAME TIMER & POSEIDON
+// ────────────────────────────────────────────────
+function gameTimer() {
+  if (!isRunning) return;
+  timeLeft--;
+  poseidonTimer--;
+  if (poseidonTimer <= 0) {
+    isFlooding = true;
+    floodProgress = 0;
+    poseidonTimer = POSEIDON_INTERVAL;
+  }
+  if (timeLeft <= 0) endGame();
+  updateHUD();
+}
+
+// ────────────────────────────────────────────────
+// MAIN LOOP
 // ────────────────────────────────────────────────
 function gameLoop() {
   if (!isRunning) return;
@@ -446,24 +440,26 @@ function gameLoop() {
 }
 
 function updateGame() {
-  // Player movement (joystick or direct touch)
   if (player.speedEnd > Date.now() / 1000) {
-    player.speedMult = 2.2;
+    player.speedMult = 2;
   } else {
     player.speedMult = 1;
   }
 
-  // Opponent AI
   updateOpponent();
-
-  // Collisions
   checkCollisions();
-
-  // Particles
   updateParticles();
-
-  // Camera + zoom
   updateCamera();
+
+  // Flood mechanic
+  if (isFlooding) {
+    floodProgress += 0.02;
+    if (floodProgress >= 1) {
+      souls = [];
+      isFlooding = false;
+      spawnSouls(BASE_SOULS + 25);
+    }
+  }
 }
 
 function updateOpponent() {
@@ -493,6 +489,9 @@ function updateOpponent() {
       opponent.target = null;
     }
   }
+
+  opponent.x = Math.max(20, Math.min(WORLD_W - 20, opponent.x));
+  opponent.y = Math.max(20, Math.min(WORLD_H - 20, opponent.y));
 }
 
 function checkCollisions() {
@@ -535,7 +534,7 @@ function addParticles(x, y, color, count = 30) {
 }
 
 // ────────────────────────────────────────────────
-// CAMERA + ZOOM
+ // CAMERA
 // ────────────────────────────────────────────────
 function updateCamera() {
   camX = player.x - canvas.width / (2 * zoom);
@@ -547,14 +546,13 @@ function updateCamera() {
 }
 
 // ────────────────────────────────────────────────
-// RENDER
+// DRAW
 // ────────────────────────────────────────────────
 function drawGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Background gradient
-  const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0,
-                                         canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height));
+  const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height));
   if (playerChar === 'Zeus') {
     grad.addColorStop(0, '#0a001f');
     grad.addColorStop(0.5, '#1a0033');
@@ -582,7 +580,7 @@ function drawGame() {
   });
   ctx.globalAlpha = 1;
 
-  // Souls
+  // Souls (orbs)
   souls.forEach(s => {
     const r = s.radius + Math.sin(s.pulse += 0.15) * 4;
     ctx.shadowColor = s.color;
@@ -611,7 +609,7 @@ function drawGame() {
   });
   ctx.globalAlpha = 1;
 
-  // Players
+  // Players (orbs with symbols)
   [player, opponent].forEach(p => {
     ctx.shadowColor = p.color;
     ctx.shadowBlur = 35;
@@ -633,6 +631,14 @@ function drawGame() {
     ctx.textBaseline = 'middle';
     ctx.fillText(p.symbol, p.x, p.y);
   });
+
+  // Poseidon flood water cover
+  if (isFlooding) {
+    ctx.globalAlpha = 0.65 + Math.sin(floodProgress * Math.PI) * 0.35;
+    ctx.fillStyle = 'rgba(0, 100, 255, 0.5)';
+    ctx.fillRect(0, 0, WORLD_W * floodProgress, WORLD_H);
+    ctx.globalAlpha = 1;
+  }
 
   ctx.restore();
 }
@@ -661,7 +667,7 @@ function endGame() {
 }
 
 // ────────────────────────────────────────────────
-// CONTROLS (fixed joystick + direct touch fallback)
+// INPUT
 // ────────────────────────────────────────────────
 function setupControls() {
   let joyRect, centerX, centerY;
@@ -711,7 +717,7 @@ function setupControls() {
     window.addEventListener('pointerup', onUp);
   });
 
-  // Direct touch follow (when joystick not active)
+  // Direct touch follow fallback
   canvas.addEventListener('pointermove', e => {
     if (joystickActive) return;
     if (e.pointerType === 'mouse' && e.buttons !== 1) return;
@@ -723,6 +729,37 @@ function setupControls() {
     player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
     player.y = Math.max(20, Math.min(WORLD_H - 20, player.y));
   });
+
+  // Pinch zoom
+  let initialDist = 0;
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      initialDist = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].pageX - e.touches[1].pageX,
+        e.touches[0].pageY - e.touches[1].pageY
+      );
+      const delta = (dist - initialDist) / 400;
+      targetZoom = Math.max(0.6, Math.min(2.5, targetZoom + delta));
+      initialDist = dist;
+    }
+  }, { passive: false });
+
+  // Wheel zoom
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.2 : 0.2;
+    targetZoom = Math.max(0.6, Math.min(2.5, targetZoom + delta));
+  }, { passive: false });
 }
 
 init();
