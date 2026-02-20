@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HADES vs ZEUS: NEON SOUL RACE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --btn-size: clamp(120px, 38vw, 180px);
+            --grid-gap: clamp(1rem, 4vw, 2.5rem);
+            --container-pad: clamp(1.25rem, 5vw, 2.5rem);
+            --joy-size: clamp(100px, 22vh, 160px);
+            --neon-cyan: #00f0ff;
+            --neon-magenta: #ff0066;
+            --neon-green: #39ff14;
+            --neon-yellow: #ffe700;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Orbitron', sans-serif;
+            background: #000;
+            color: var(--neon-cyan);
+            overflow: hidden;
+            min-height: 100dvh;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Starfield */
+        #stars {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at bottom, #0b001f 0%, #000 100%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255,255,255,0.8);
+            animation: twinkle 6s infinite alternate;
+        }
+
+        @keyframes twinkle {
+            0%,100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(circle at center, #0a0a1a 0%, #000 70%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: grab;
+            transition: filter 0.1s ease;
+        }
+
+        #gameCanvas:active {
+            cursor: grabbing;
+        }
+
+        /* UI Overlays */
+        #ui-overlay,
+        #game-over-screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            z-index: 20;
+            padding: var(--container-pad);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 20px var(--neon-magenta), 0 0 40px var(--neon-cyan);
+            background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan), var(--neon-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            animation: glitch 2s infinite;
+        }
+
+        .glitch {
+            animation: glitch 1.2s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 2px 0 var(--neon-magenta), -2px 0 var(--neon-cyan); }
+            20% { text-shadow: -2px 0 var(--neon-magenta), 2px 0 var(--neon-cyan); }
+            40% { text-shadow: 2px 0 var(--neon-cyan), -2px 0 var(--neon-magenta); }
+            60% { text-shadow: -4px 0 var(--neon-magenta), 4px 0 var(--neon-cyan); }
+            80% { text-shadow: 4px 0 var(--neon-cyan), -4px 0 var(--neon-magenta); }
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+            font-family: 'VT323', monospace;
+            letter-spacing: 0.05em;
+        }
+
+        .title-button {
+            padding: clamp(1rem, 4vw, 1.5rem) clamp(2rem, 8vw, 3rem);
+            margin: 1rem;
+            font-size: clamp(1.1rem, 4vw, 1.6rem);
+            font-weight: 700;
+            cursor: pointer;
+            border: 2px solid;
+            border-radius: 1rem;
+            color: #fff;
+            background: rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 0.1em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.6s;
+        }
+
+        .title-button:hover::before,
+        .title-button:active::before {
+            opacity: 1;
+        }
+
+        .title-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px currentColor;
+        }
+
+        #zeus-select {
+            background: linear-gradient(135deg, #00d4ff, #007bff);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 30px var(--neon-cyan);
+        }
+
+        #hades-select {
+            background: linear-gradient(135deg, #ff0066, #dc3545);
+            border-color: var(--neon-magenta);
+            box-shadow: 0 0 30px var(--neon-magenta);
+        }
+
+        #retry-button {
+            background: linear-gradient(135deg, var(--neon-green), #28a745);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 30px var(--neon-green);
+        }
+
+        /* Score Display */
+        #score-display {
+            position: fixed;
+            top: clamp(20px, 3vh, 40px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(3,10,30,0.8);
+            backdrop-filter: blur(15px);
+            padding: 1rem 2rem;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(0,240,255,0.4);
+            box-shadow: 0 0 40px rgba(0,240,255,0.3);
+            font-size: clamp(1.1rem, 3vw, 1.6rem);
+            z-index: 25;
+            display: flex;
+            gap: 2rem;
+            font-weight: 700;
+        }
+
+        .player-score {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #player-score-val { color: var(--neon-cyan); }
+        #opponent-score-val { color: var(--neon-magenta); }
+
+        /* Joystick */
+        #joystick-area {
+            position: fixed;
+            bottom: clamp(20px, 5vh, 40px);
+            right: clamp(20px, 5vh, 40px);
+            width: var(--joy-size);
+            height: var(--joy-size);
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        #joystick-area.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #joystick-base {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 3px solid rgba(0,240,255,0.5);
+            box-shadow: 0 0 30px rgba(0,240,255,0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #joystick-knob {
+            position: relative;
+            width: 35%;
+            height: 35%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-cyan), #00d4ff);
+            box-shadow: 0 0 25px var(--neon-cyan);
+            cursor: grab;
+            touch-action: none;
+            transition: transform 0.1s ease;
+        }
+
+        #joystick-knob:active {
+            cursor: grabbing;
+            transform: scale(0.95) !important;
+        }
+
+        /* Game Over */
+        #game-over-screen h1 { 
+            color: var(--neon-yellow);
+            text-shadow: 0 0 30px var(--neon-yellow);
+        }
+
+        .kraken-scene {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255,0,102,0.15);
+            border: 1px solid var(--neon-magenta);
+            border-radius: 1rem;
+            box-shadow: 0 0 25px rgba(255,0,102,0.4);
+            width: min(90%, 600px);
+            font-family: 'VT323', monospace;
+            line-height: 1.4;
+        }
+
+        .coupon-code {
+            color: var(--neon-green) !important;
+            font-size: clamp(1.5rem, 5vw, 2.5rem) !important;
+            font-weight: 900;
+            text-shadow: 0 0 20px var(--neon-green);
+            margin: 1.5rem 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Scanlines */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0px,
+                transparent 2px,
+                rgba(0,0,0,0.25) 2px,
+                rgba(0,0,0,0.25) 4px
+            );
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="stars"></div>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-overlay">
+            <h1 class="glitch tracking-widest">NEON SOUL RACE</h1>
+            <p class="neon-text" style="font-size: clamp(1.2rem, 4vw, 1.8rem); margin-bottom: 3rem;">⚡ ZEUS vs 💀 HADES ⚡</p>
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 500px;">
+                <button id="zeus-select" class="title-button neon-text">⚡ CYBER ZEUS</button>
+                <button id="hades-select" class="title-button neon-text">💀 VOID HADES</button>
+            </div>
+            <p class="neon-text" style="margin-top: 3rem; font-size: clamp(1rem, 3vw, 1.4rem);">DOMINATE **50 NEON SOULS** BEFORE OPPONENT • 60s LIMIT</p>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1 class="glitch">CORE BREACH</h1>
+            <p id="final-score" class="neon-text" style="font-size: clamp(1.4rem, 4vw, 2rem); margin-bottom: 1rem;"></p>
+            <p id="game-result" class="neon-text" style="font-size: clamp(1.2rem, 3.5vw, 1.6rem); margin-bottom: 2rem;"></p>
+
+            <div class="kraken-scene glitch">
+                <p>⚡ A DIGITAL ROAR ECHOES THROUGH THE ABYSS... ⚡</p>
+                <p>💀 The **KRACKEN** erupts from the void! It devours the chained princess in a brutal surge of raw power. 💀</p>
+            </div>
+
+            <p id="coupon-display" class="coupon-code hidden">NEON REWARD: **HADES25** • 10% OFF HOODIES</p>
+
+            <button id="retry-button" class="title-button neon-text">REBOOT RACE</button>
+        </div>
+
+        <div id="score-display" class="hidden">
+            <div class="player-score">
+                <span id="player-score-label"></span>
+                <span id="player-score-val" class="neon-text">0</span>
+            </div>
+            <div class="player-score">
+                <span class="neon-text" style="font-size: 1.1em;">⏱️</span>
+                <span id="time-left" class="neon-text">60</span>
+            </div>
+            <div class="player-score">
+                <span id="opponent-score-label"></span>
+                <span id="opponent-score-val" class="neon-text">0</span>
+            </div>
+        </div>
+
+        <div id="joystick-area">
+            <div id="joystick-base">
+                <div id="joystick-knob"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Globals
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('gameContainer');
+        const uiOverlay = document.getElementById('ui-overlay');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const retryButton = document.getElementById('retry-button');
+        const zeusSelect = document.getElementById('zeus-select');
+        const hadesSelect = document.getElementById('hades-select');
+        const playerScoreVal = document.getElementById('player-score-val');
+        const opponentScoreVal = document.getElementById('opponent-score-val');
+        const playerScoreLabel = document.getElementById('player-score-label');
+        const opponentScoreLabel = document.getElementById('opponent-score-label');
+        const timeLeftDisplay = document.getElementById('time-left');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const gameResultDisplay = document.getElementById('game-result');
+        const couponDisplay = document.getElementById('coupon-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const joystickArea = document.getElementById('joystick-area');
+        const joystickKnob = document.getElementById('joystick-knob');
+
+        // Game Config
+        const WORLD_WIDTH = 4000;
+        const WORLD_HEIGHT = 3000;
+        const SOUL_THRESHOLD = 50;
+        const GAME_TIME = 60;
+        const PLAYER_SPEED = 5;
+        const OPPONENT_SPEED = 5.3; // Slightly faster AI
+        const MAX_JOYSTICK_DISTANCE = 0.65; // Normalized
+
+        // Responsive
+        let dpr = 1;
+        let viewportWidth = window.innerWidth;
+        let viewportHeight = window.innerHeight;
+        let camX = 0;
+        let camY = 0;
+        let joystickCenterX = 0;
+        let joystickCenterY = 0;
+
+        // Game State
+        let player = {};
+        let opponent = {};
+        let souls = [];
+        let stars = [];
+        let particles = [];
+        let gameLoopId;
+        let countdownId;
+        let timeLeft = GAME_TIME;
+        let isGameRunning = false;
+        let isJoystickActive = false;
+
+        // Init
+        function init() {
+            createStars();
+            resize();
+            uiOverlay.classList.remove('hidden');
+            window.addEventListener('resize', resize);
+        }
+
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < 400; i++) {
+                stars.push({
+                    x: Math.random() * WORLD_WIDTH,
+                    y: Math.random() * WORLD_HEIGHT,
+                    size: Math.random() * 1.5 + 0.5,
+                    twinkle: Math.random() * Math.PI * 2,
+                    speed: Math.random() * 0.02 + 0.005
+                });
+            }
+        }
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            viewportWidth = window.innerWidth;
+            viewportHeight = window.innerHeight;
+
+            canvas.width = viewportWidth * dpr;
+            canvas.height = viewportHeight * dpr;
+            canvas.style.width = viewportWidth + 'px';
+            canvas.style.height = viewportHeight + 'px';
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Update joystick center
+            joystickCenterX = joystickArea.offsetWidth / 2;
+            joystickCenterY = joystickArea.offsetHeight / 2;
+
+            // Update camera if game running
+            if (isGameRunning) {
+                updateCamera();
+            }
+        }
+
+        // Player Creation
+        function createPlayer(charName, color, symbol, isOpponent = false) {
+            return {
+                charName,
+                x: WORLD_WIDTH * 0.5 + (Math.random() - 0.5) * 400,
+                y: WORLD_HEIGHT * 0.5 + (Math.random() - 0.5) * 400,
+                size: 22,
+                dx: 0,
+                dy: 0,
+                speed: isOpponent ? OPPONENT_SPEED : PLAYER_SPEED,
+                color,
+                symbol,
+                score: 0,
+                isOpponent,
+                targetSoul: null,
+                aiWaitTime: 0
+            };
+        }
+
+        // Souls
+        function spawnSouls(targetCount) {
+            while (souls.length < targetCount) {
+                let attempts = 0;
+                let soul;
+                while (attempts < 200) {
+                    soul = {
+                        x: Math.random() * (WORLD_WIDTH - 40) + 20,
+                        y: Math.random() * (WORLD_HEIGHT - 40) + 20,
+                        radius: 9,
+                        color: `hsl(${200 + Math.random() * 60}, 80%, 60%)`,
+                        pulse: Math.random() * Math.PI * 2
+                    };
+
+                    let tooClose = false;
+                    for (let pl of [player, opponent]) {
+                        if (Math.hypot(soul.x - pl.x, soul.y - pl.y) < 80) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    if (!tooClose) break;
+                    attempts++;
+                }
+                if (!tooClose) souls.push(soul);
+            }
+        }
+
+        // Start Game
+        function startGame(playerChar) {
+            if (isGameRunning) return;
+
+            player = createPlayer(playerChar === 'Zeus' ? 'Zeus' : 'Hades', playerChar === 'Zeus' ? '#00d4ff' : '#ff0066', playerChar === 'Zeus' ? '⚡' : '💀');
+            opponent = createPlayer(playerChar === 'Zeus' ? 'Hades' : 'Zeus', playerChar === 'Zeus' ? '#ff0066' : '#00d4ff', playerChar === 'Zeus' ? '💀' : '⚡', true);
+
+            player.score = opponent.score = 0;
+            souls = [];
+            particles = [];
+            timeLeft = GAME_TIME;
+            isGameRunning = true;
+            isJoystickActive = false;
+
+            spawnSouls(60);
+
+            uiOverlay.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            scoreDisplay.classList.remove('hidden');
+            joystickArea.classList.add('active');
+
+            playerScoreLabel.innerHTML = `${player.charName}:`;
+            opponentScoreLabel.innerHTML = `${opponent.charName}:`;
+
+            updateScoreDisplay();
+            gameLoopId = requestAnimationFrame(gameLoop);
+            countdownId = setInterval(countdown, 1000);
+        }
+
+        function endGame(winner) {
+            isGameRunning = false;
+            cancelAnimationFrame(gameLoopId);
+            clearInterval(countdownId);
+            joystickArea.classList.remove('active');
+
+            finalScoreDisplay.textContent = `FINAL: ${player.charName} ${player.score} • ${opponent.charName} ${opponent.score}`;
+
+            const playerWon = winner === player.charName;
+            const oppWon = winner === opponent.charName;
+
+            if (playerWon) {
+                gameResultDisplay.innerHTML = `<span style="color: var(--neon-green);">VICTORY! ${player.charName} DOMINATED THE NEON SOULS</span>`;
+                couponDisplay.classList.remove('hidden');
+            } else if (oppWon) {
+                gameResultDisplay.innerHTML = `<span style="color: var(--neon-magenta);">DEFEAT! ${opponent.charName} CLAIMED SUPREMACY</span>`;
+                couponDisplay.classList.add('hidden');
+            } else {
+                gameResultDisplay.innerHTML = `<span style="color: var(--neon-yellow);">⏱️ TIME FRACTURE • NO DOMINANCE ACHIEVED</span>`;
+                couponDisplay.classList.add('hidden');
+            }
+
+            gameOverScreen.classList.remove('hidden');
+            scoreDisplay.classList.add('hidden');
+        }
+
+        // Countdown
+        function countdown() {
+            timeLeft--;
+            updateScoreDisplay();
+        }
+
+        // Main Loop
+        function gameLoop() {
+            if (!isGameRunning) return;
+
+            updateEntities();
+            checkCollisions();
+            updateCamera();
+            draw();
+
+            // Win/Time Checks
+            if (player.score >= SOUL_THRESHOLD) return endGame(player.charName);
+            if (opponent.score >= SOUL_THRESHOLD) return endGame(opponent.charName);
+            if (timeLeft <= 0) return endGame(null);
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateEntities() {
+            updatePlayer(player);
+            updatePlayer(opponent);
+            opponentAI();
+            updateParticles();
+            stars.forEach(s => s.twinkle += s.speed);
+        }
+
+        function updatePlayer(p) {
+            p.x += p.dx;
+            p.y += p.dy;
+            p.x = Math.max(p.size / 2, Math.min(WORLD_WIDTH - p.size / 2, p.x));
+            p.y = Math.max(p.size / 2, Math.min(WORLD_HEIGHT - p.size / 2, p.y));
+        }
+
+        function opponentAI() {
+            const p = opponent;
+            if (p.aiWaitTime > 0) {
+                p.aiWaitTime--;
+                p.dx = p.dy = 0;
+                return;
+            }
+
+            // 10% chance random soul, else closest
+            if (Math.random() < 0.1 || !p.targetSoul || souls.indexOf(p.targetSoul) === -1) {
+                if (souls.length === 0) return;
+                p.targetSoul = souls[Math.floor(Math.random() * souls.length)];
+            }
+
+            if (p.targetSoul) {
+                const dx = p.targetSoul.x - p.x;
+                const dy = p.targetSoul.y - p.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 2) {
+                    p.dx = (dx / dist) * p.speed;
+                    p.dy = (dy / dist) * p.speed;
+                } else {
+                    p.aiWaitTime = 15 + Math.random() * 10;
+                    p.targetSoul = null;
+                }
+            }
+        }
+
+        function checkCollisions() {
+            [player, opponent].forEach(p => {
+                for (let i = souls.length - 1; i >= 0; i--) {
+                    const soul = souls[i];
+                    const dist = Math.hypot(p.x - soul.x, p.y - soul.y);
+                    if (dist < p.size / 2 + soul.radius) {
+                        souls.splice(i, 1);
+                        p.score++;
+                        addParticles(p.x, p.y, p.color);
+                        if (p.isOpponent) p.targetSoul = null;
+                        spawnSouls(souls.length + 2);
+                        updateScoreDisplay();
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    }
+                }
+            });
+        }
+
+        function addParticles(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12 - 2,
+                    life: 1,
+                    decay: Math.random() * 0.04 + 0.025,
+                    size: Math.random() * 5 + 2,
+                    color: color
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.15;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function updateCamera() {
+            camX = Math.max(0, Math.min(player.x - viewportWidth / 2, WORLD_WIDTH - viewportWidth));
+            camY = Math.max(0, Math.min(player.y - viewportHeight / 2, WORLD_HEIGHT - viewportHeight));
+        }
+
+        function draw() {
+            ctx.save();
+            ctx.translate(-camX, -camY);
+
+            // Stars BG
+            ctx.shadowBlur = 0;
+            stars.forEach(star => {
+                const alpha = 0.4 + Math.sin(star.twinkle) * 0.4;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Souls
+            souls.forEach(soul => {
+                const pulse = 7 + Math.sin(soul.pulse) * 3;
+                ctx.save();
+                ctx.shadowColor = soul.color;
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = soul.color;
+                ctx.beginPath();
+                ctx.arc(soul.x, soul.y, pulse, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(soul.x, soul.y, pulse * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                soul.pulse += 0.12;
+            });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 15 * p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Players
+            [player, opponent].forEach(p => {
+                ctx.save();
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 25;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size / 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'white';
+                ctx.font = `${p.size}px Orbitron, Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.symbol, p.x, p.y);
+            });
+
+            ctx.restore();
+        }
+
+        function updateScoreDisplay() {
+            playerScoreVal.textContent = player.score;
+            opponentScoreVal.textContent = opponent.score;
+            timeLeftDisplay.textContent = timeLeft;
+        }
+
+        // Controls
+        zeusSelect.onclick = () => startGame('Zeus');
+        hadesSelect.onclick = () => startGame('Hades');
+        retryButton.onclick = () => {
+            gameOverScreen.classList.add('hidden');
+            uiOverlay.classList.remove('hidden');
+        };
+
+        // Joystick
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            if (!isGameRunning) return;
+            isJoystickActive = true;
+            if (!e.type.startsWith('touch')) {
+                window.addEventListener('mousemove', handleJoystickMove);
+                window.addEventListener('mouseup', handleJoystickEnd);
+            }
+            handleJoystickMove(e);
+        }
+
+        function handleJoystickMove(e) {
+            if (!isJoystickActive || !isGameRunning) return;
+            e.preventDefault();
+
+            const rect = joystickArea.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let x = clientX - rect.left;
+            let y = clientY - rect.top;
+
+            const dx = x - joystickCenterX;
+            const dy = y - joystickCenterY;
+            const distance = Math.hypot(dx, dy);
+
+            let knobDx = dx;
+            let knobDy = dy;
+            if (distance > joystickCenterX * MAX_JOYSTICK_DISTANCE) {
+                const angle = Math.atan2(dy, dx);
+                knobDx = Math.cos(angle) * joystickCenterX * MAX_JOYSTICK_DISTANCE;
+                knobDy = Math.sin(angle) * joystickCenterX * MAX_JOYSTICK_DISTANCE;
+            }
+
+            joystickKnob.style.transform = `translate(${knobDx}px, ${knobDy}px)`;
+
+            player.dx = (knobDx / (joystickCenterX * MAX_JOYSTICK_DISTANCE)) * PLAYER_SPEED;
+            player.dy = (knobDy / (joystickCenterX * MAX_JOYSTICK_DISTANCE)) * PLAYER_SPEED;
+        }
+
+        function handleJoystickEnd(e) {
+            isJoystickActive = false;
+            joystickKnob.style.transform = 'translate(0, 0)';
+            player.dx = 0;
+            player.dy = 0;
+            window.removeEventListener('mousemove', handleJoystickMove);
+            window.removeEventListener('mouseup', handleJoystickEnd);
+        }
+
+        joystickKnob.addEventListener('mousedown', handleJoystickStart);
+        joystickArea.addEventListener('touchstart', handleJoystickStart, { passive: false });
+        joystickArea.addEventListener('touchmove', handleJoystickMove, { passive: false });
+        joystickArea.addEventListener('touchend', handleJoystickEnd);
+        joystickArea.addEventListener('touchcancel', handleJoystickEnd);
+        joystickKnob.addEventListener('touchstart', handleJoystickStart, { passive: false });
+
+        // Keyboard (disabled during joystick)
+        document.addEventListener('keydown', (e) => {
+            if (!isGameRunning || isJoystickActive) return;
+            const speed = PLAYER_SPEED;
+            switch (e.key.toLowerCase()) {
+                case 'w': case 'arrowup': player.dy = -speed; break;
+                case 's': case 'arrowdown': player.dy = speed; break;
+                case 'a': case 'arrowleft': player.dx = -speed; break;
+                case 'd': case 'arrowright': player.dx = speed; break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (!isGameRunning || isJoystickActive) return;
+            switch (e.key.toLowerCase()) {
+                case 'w': case 'arrowup':
+                case 's': case 'arrowdown': player.dy = 0; break;
+                case 'a': case 'arrowleft':
+                case 'd': case 'arrowright': player.dx = 0; break;
+            }
+        });
+
+        // Start
+        window.onload = init;
+    </script>
+</body>
+</html>
